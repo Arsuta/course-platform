@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Switch } from '@headlessui/vue'
 
 const categories = [
   { 
@@ -78,9 +77,7 @@ const showFreeOnly = ref(false)
     <div class="mt-8 md:mt-12 bg-gray-100 rounded-xl p-4 md:p-8">
       <h3 class="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">О нашей платформе</h3>
       <p class="text-sm md:text-base text-gray-600 leading-relaxed">
-        Наша образовательная платформа предлагает инновационный подход к онлайн-обучению. 
-        Мы объединяем передовые технологии и экспертные знания, чтобы создать уникальное 
-        образовательное пространство.
+        Мы тут такое мутим, странное, но мы это делаем.
       </p>
     </div>
   </div>

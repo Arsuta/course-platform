@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { 
   AcademicCapIcon,
   UserGroupIcon,
@@ -39,7 +38,7 @@ const features = [
   <div class="space-y-24">
     <!-- Заголовок -->
     <div class="text-center max-w-3xl mx-auto">
-      <h1 class="text-4xl font-bold text-gray-900 mb-6">О нашей платформе</h1>
+      <h1 class="text-4xl font-bold text-gray-900 mb-6">платформе</h1>
       <p class="text-lg text-gray-600">
         Мы создаем будущее образования, делая его доступным, эффективным и увлекательным для каждого.
       </p>

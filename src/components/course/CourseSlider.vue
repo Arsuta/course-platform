@@ -22,9 +22,8 @@ const prevSlide = () => {
     ? props.courses.length - 1 
     : currentSlide.value - 1
 }
-
 const startAutoplay = () => {
-  autoplayInterval.value = setInterval(nextSlide, AUTOPLAY_DELAY)
+  autoplayInterval.value = setInterval(nextSlide, AUTOPLAY_DELAY) as unknown as number
 }
 
 const stopAutoplay = () => {

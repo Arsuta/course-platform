@@ -6,8 +6,7 @@
         <div>
           <h3 class="text-lg font-semibold text-gray-900 mb-4">О компании</h3>
           <p class="text-gray-600 text-sm">
-            Мы предоставляем качественное онлайн-образование с 2020 года. Наша миссия - сделать 
-            профессиональное образование доступным для каждого.
+            Ебем индустрию образования и Программирование с 2024 года. Смотри как мы ебанем сейчас.
           </p>
         </div>
 
@@ -53,7 +52,7 @@
       </div>
 
       <div class="mt-8 pt-8 border-t border-gray-200 text-center text-sm text-gray-600">
-        <p>&copy; 2024 EduPlatform. Все права защищены.</p>
+        <p>&copy; 2024 AIMProgramming. Все права защищены.</p>
       </div>
     </div>
   </footer>

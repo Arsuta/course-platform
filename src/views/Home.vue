@@ -22,14 +22,13 @@ onMounted(async () => {
       <div class="max-w-3xl mx-auto text-center space-y-6">
         <h2 class="text-3xl font-bold text-gray-900">Образовательная платформа нового поколения</h2>
         <p class="text-lg text-gray-600 leading-relaxed">
-          Мы создаем доступную и эффективную среду для обучения, где каждый может найти свой путь к профессиональному росту.
-          Наша миссия - сделать качественное образование доступным для всех, кто стремится к развитию.
+          Мы создаем пока...
         </p>
       </div>
 
       <!-- Популярные курсы -->
       <div>
-        <h2 class="text-3xl font-bold mb-8">Популярные курсы</h2>
+        <h2 class="text-3xl font-bold mb-8">Попки курсы</h2>
         <CourseSlider :courses="courses" />
       </div>
 
