@@ -19,6 +19,10 @@ const toggleProfile = () => {
 </script>
 
 <template>
+    <div class="flex-1 bg-white rounded-xl p-6">
+          <HomeHeader 
+          />
+        </div>
   <div class="min-h-screen bg-gray-50 flex flex-col">
     <div class="flex-1">
       <div class="flex gap-6 mx-auto max-w-screen-2xl relative p-6">
