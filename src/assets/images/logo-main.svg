@@ -7,11 +7,11 @@
       }
 
       .cls-1, .cls-2, .cls-3 {
-        fill: red;
+        fill: currentColor;
       }
 
       .cls-1, .cls-3 {
-        stroke: red;
+        stroke: currentColor;
         stroke-miterlimit: 10;
       }
 

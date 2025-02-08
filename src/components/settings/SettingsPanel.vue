@@ -12,8 +12,8 @@ import {
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const activeTab = ref('appearance')
-const isDarkMode = ref(settingsStore.theme === 'dark')
 const accentColor = ref(settingsStore.accentColor)
+const shouldSaveColor = ref(settingsStore.shouldSaveColor)
 
 const tabs = [
   { id: 'appearance', name: 'Внешний вид', icon: PaintBrushIcon },
@@ -26,13 +26,19 @@ const userProfile = ref({
   email: settingsStore.user.email || 'user@example.com'
 })
 
-watch(isDarkMode, (newValue) => {
-  settingsStore.setTheme(newValue ? 'dark' : 'light')
+watch(accentColor, (newValue) => {
+  document.documentElement.style.setProperty('--accent-color', newValue);
+  settingsStore.setAccentColor(newValue);
 })
 
-watch(accentColor, (newValue) => {
-  settingsStore.setAccentColor(newValue)
+watch(shouldSaveColor, (newValue) => {
+  settingsStore.setShouldSaveColor(newValue)
 })
+
+const resetToDefaultColor = () => {
+  settingsStore.resetToDefaultColor()
+  accentColor.value = settingsStore.accentColor
+}
 
 const updateProfile = () => {
   settingsStore.user = {
@@ -55,13 +61,13 @@ const goBack = () => {
     <!-- Кнопка возврата -->
     <button 
       @click="goBack"
-      class="mb-6 flex items-center text-gray-600 dark:text-gray-300 hover:text-primary transition-colors"
+      class="mb-6 flex items-center text-gray-600 hover:text-primary transition-colors"
     >
       <ArrowLeftIcon class="w-5 h-5 mr-2" />
       Вернуться назад
     </button>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+    <div class="bg-white rounded-xl shadow-lg p-6">
       <div class="flex space-x-6">
         <!-- Боковая панель с вкладками -->
         <div class="w-64 space-y-2">
@@ -70,7 +76,7 @@ const goBack = () => {
             :key="tab.id"
             @click="activeTab = tab.id"
             class="w-full flex items-center px-4 py-2 rounded-lg text-left transition-colors"
-            :class="activeTab === tab.id ? 'bg-primary-light/10 text-primary dark:bg-primary-light/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            :class="activeTab === tab.id ? 'bg-primary-light/10 text-primary' : 'text-gray-600 hover:bg-gray-50'"
           >
             <component :is="tab.icon" class="w-5 h-5 mr-3" />
             {{ tab.name }}
@@ -84,14 +90,40 @@ const goBack = () => {
             <h2 class="text-2xl font-semibold text-gray-900">Внешний вид</h2>
             
             <!-- Выбор цвета акцентов -->
-            <div class="p-4 bg-gray-50 rounded-lg">
-              <h3 class="font-medium text-gray-900 mb-2">Цвет акцентов</h3>
-              <p class="text-sm text-gray-500 mb-4">Выберите основной цвет интерфейса</p>
-              <input 
-                v-model="accentColor"
-                type="color"
-                class="w-full h-10 rounded cursor-pointer bg-transparent"
-              >
+            <div class="p-4 bg-gray-50 rounded-lg space-y-6">
+              <div>
+                <h3 class="font-medium text-gray-900 mb-2">Цвет акцентов</h3>
+                <p class="text-sm text-gray-500 mb-4">Выберите основной цвет интерфейса</p>
+                <div class="flex items-center gap-4">
+                  <input 
+                    v-model="accentColor"
+                    type="color"
+                    class="w-full h-10 rounded cursor-pointer bg-transparent"
+                  >
+                  <button 
+                    @click="resetToDefaultColor"
+                    class="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                  >
+                    Сбросить
+                  </button>
+                </div>
+              </div>
+
+              <!-- Переключатель сохранения цвета -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium text-gray-900">Сохранять цвет</h3>
+                  <p class="text-sm text-gray-500">Сохранять выбранный цвет между сессиями</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    v-model="shouldSaveColor" 
+                    class="sr-only peer"
+                  >
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -105,7 +137,7 @@ const goBack = () => {
                 <input 
                   v-model="userProfile.name"
                   type="text" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-light focus:ring-primary-light dark:bg-gray-700 dark:text-white"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-light focus:ring-primary-light"
                 >
               </div>
 
@@ -114,7 +146,7 @@ const goBack = () => {
                 <input 
                   v-model="userProfile.email"
                   type="email" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-light focus:ring-primary-light dark:bg-gray-700 dark:text-white"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-light focus:ring-primary-light"
                 >
               </div>
 
@@ -135,7 +167,7 @@ const goBack = () => {
                 <label class="block text-sm font-medium text-gray-700">Текущий пароль</label>
                 <input 
                   type="password" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-light focus:ring-primary-light dark:bg-gray-700 dark:text-white"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-light focus:ring-primary-light"
                 >
               </div>
 
@@ -143,7 +175,7 @@ const goBack = () => {
                 <label class="block text-sm font-medium text-gray-700">Новый пароль</label>
                 <input 
                   type="password" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-light focus:ring-primary-light dark:bg-gray-700 dark:text-white"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-light focus:ring-primary-light"
                 >
               </div>
 
@@ -151,7 +183,7 @@ const goBack = () => {
                 <label class="block text-sm font-medium text-gray-700">Подтвердите новый пароль</label>
                 <input 
                   type="password" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-light focus:ring-primary-light dark:bg-gray-700 dark:text-white"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-light focus:ring-primary-light"
                 >
               </div>
 

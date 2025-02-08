@@ -2,12 +2,13 @@
 import { ref } from 'vue'
 import Navbar from './Navbar.vue'
 import ProfilePanel from './ProfilePanel.vue'
-import Header from './Header.vue'
 import Footer from './Footer.vue'
+import TopPanel from './TopPanel.vue'
 import { RouterView } from 'vue-router'
 
 const isNavCollapsed = ref(true)
 const isProfileCollapsed = ref(true)
+const isBlurred = ref(false)
 
 const toggleNav = () => {
   isNavCollapsed.value = !isNavCollapsed.value
@@ -19,12 +20,12 @@ const toggleProfile = () => {
 </script>
 
 <template>
-    <div class="flex-1 bg-white rounded-xl p-6">
-          <HomeHeader 
-          />
-        </div>
   <div class="min-h-screen bg-gray-50 flex flex-col">
-    <div class="flex-1">
+    <TopPanel @update:blur="isBlurred = $event" />
+    <div 
+      class="flex-1 pt-16 transition-all duration-1000"
+      :class="{ 'blur-sm': isBlurred }"
+    >
       <div class="flex gap-6 mx-auto max-w-screen-2xl relative p-6">
         <Navbar 
           :is-collapsed="isNavCollapsed" 
@@ -33,22 +34,16 @@ const toggleProfile = () => {
         />
 
         <div class="flex-1 bg-white rounded-xl p-6">
-          <Header 
-            @toggle-nav="toggleNav" 
-            @toggle-profile="toggleProfile" 
-          />
-          <main class="mt-6">
-            <RouterView />
-          </main>
+          <RouterView />
         </div>
 
         <ProfilePanel 
-          :is-collapsed="isProfileCollapsed" 
+          :is-collapsed="isProfileCollapsed"
           @toggle="toggleProfile"
           class="sticky top-6 h-[calc(100vh-3rem)] rounded-xl"
         />
       </div>
     </div>
-    <Footer />
+    <Footer class="transition-all duration-1000" :class="{ 'blur-sm': isBlurred }" />
   </div>
 </template>
