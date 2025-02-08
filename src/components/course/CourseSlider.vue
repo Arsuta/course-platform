@@ -42,18 +42,17 @@ onUnmounted(stopAutoplay)
 
 <template>
   <div v-if="courses.length > 0" class="relative">
-    <!-- Слайдер -->
-    <div class="overflow-hidden">
+    <div class="overflow-hidden rounded-xl">
       <div 
-        class="flex transition-transform duration-500 ease-in-out"
+        class="flex transition-transform duration-1000 ease-in-out"
         :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
       >
         <div 
           v-for="course in courses" 
           :key="course.id"
-          class="w-full flex-shrink-0 px-2 sm:px-3 lg:px-4"
+          class="w-full flex-shrink-0"
         >
-          <div class="max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto">
+          <div class="max-w-[95%] lg:max-w-[85%] mx-auto">
             <CourseCard 
               :course="course" 
               @enroll="$emit('enroll', course.id)"
@@ -68,36 +67,30 @@ onUnmounted(stopAutoplay)
       @click="prevSlide"
       @mouseenter="stopAutoplay"
       @mouseleave="startAutoplay"
-      class="hidden md:flex absolute left-1 sm:left-2 lg:left-4 top-1/2 -translate-y-1/2 items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/80 hover:bg-white shadow-md transition-colors z-10"
+      class="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 backdrop-blur-sm transition-colors z-10"
     >
-      <ChevronLeftIcon class="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-gray-700" />
+      <ChevronLeftIcon class="w-6 h-6 text-white" />
     </button>
 
     <button 
       @click="nextSlide"
       @mouseenter="stopAutoplay"
       @mouseleave="startAutoplay"
-      class="hidden md:flex absolute right-1 sm:right-2 lg:right-4 top-1/2 -translate-y-1/2 items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/80 hover:bg-white shadow-md transition-colors z-10"
+      class="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 backdrop-blur-sm transition-colors z-10"
     >
-      <ChevronRightIcon class="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-gray-700" />
+      <ChevronRightIcon class="w-6 h-6 text-white" />
     </button>
 
     <!-- Индикатор прогресса -->
-    <div class="absolute bottom-2 sm:bottom-3 lg:bottom-4 left-1/2 -translate-x-1/2 w-4/5 sm:w-2/3 lg:w-1/2 h-1 bg-gray-200/50 rounded-full overflow-hidden z-10">
-      <div 
-        class="h-full bg-primary transition-all duration-300"
-        :style="{ width: `${((currentSlide) / (courses.length - 1)) * 100}%` }"
-      />
-    </div>
-
-    <!-- Мобильные точки навигации -->
-    <div class="flex md:hidden justify-center space-x-1.5 mt-4">
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
       <button
         v-for="(_, index) in courses"
         :key="index"
         @click="currentSlide = index"
-        class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors"
-        :class="currentSlide === index ? 'bg-primary' : 'bg-gray-300'"
+        class="w-2 h-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+        :class="currentSlide === index 
+          ? 'bg-white w-6' 
+          : 'bg-white/50 hover:bg-white/70'"
       />
     </div>
   </div>
@@ -109,18 +102,7 @@ onUnmounted(stopAutoplay)
 <style scoped>
 .overflow-hidden {
   overflow: hidden;
-  margin: 0 -8px;
 }
 
-@media (min-width: 640px) {
-  .overflow-hidden {
-    margin: 0 -12px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .overflow-hidden {
-    margin: 0 -16px;
-  }
-}
+/* Удаляем старые медиа-запросы, так как теперь используем процентное соотношение */
 </style>
