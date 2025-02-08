@@ -72,7 +72,7 @@ const contentClass = computed(() => ({
             v-if="isLargeScreen"
             :is-collapsed="isNavCollapsed" 
             @toggle="toggleNav"
-            class="lg:sticky lg:top-6 overflow-y-auto rounded-xl order-2 lg:order-1 transition-all duration-300 flex-shrink-0"
+            class="lg:sticky lg:top-6 overflow-y-auto rounded-xl order-2 lg:order-1 transition-all duration-1000 flex-shrink-0"
             :style="{ 
               maxHeight: 'calc(100vh - 6rem)',
               position: 'sticky'

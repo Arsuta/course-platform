@@ -39,11 +39,6 @@ const handleClick = () => {
   })
 }
 
-const handleEnroll = (event: Event) => {
-  event.stopPropagation() // Предотвращаем всплытие события
-  emit('enroll', props.course.id)
-}
-
 const getDefaultGradient = (id: number) => {
   const gradients = [
     COURSE_GRADIENTS.VUE,
@@ -76,9 +71,9 @@ const getDefaultGradient = (id: number) => {
     </div>
 
     <!-- Контент -->
-    <div class="p-3 sm:p-4 lg:p-6 space-y-2 sm:space-y-3 lg:space-y-4 flex-grow flex flex-col">
+    <div class="p-3 sm:p-4 lg:p-6 flex flex-col flex-grow">
       <!-- Метки -->
-      <div class="flex flex-wrap gap-1.5 sm:gap-2">
+      <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3">
         <span class="px-2 py-1 sm:px-3 bg-primary/10 text-primary rounded-full text-xs sm:text-sm">
           {{ categoryLabel }}
         </span>
@@ -88,53 +83,44 @@ const getDefaultGradient = (id: number) => {
       </div>
 
       <!-- Заголовок -->
-      <h3 class="text-base sm:text-lg lg:text-xl font-bold text-gray-900 line-clamp-2">
+      <h3 class="text-base sm:text-lg lg:text-xl font-bold text-gray-900 line-clamp-2 mb-2">
         {{ course.title }}
       </h3>
 
       <!-- Описание -->
-      <p class="text-xs sm:text-sm lg:text-base text-gray-600 line-clamp-2">
+      <p class="text-xs sm:text-sm lg:text-base text-gray-600 line-clamp-2 mb-4">
         {{ course.description }}
       </p>
 
-      <!-- Информация -->
-      <div class="flex items-center justify-between text-xs sm:text-sm text-gray-500 mt-auto">
-        <span>{{ formatDuration(course.duration) }}</span>
-        <span>{{ course.modules.length }} модулей</span>
-      </div>
-
-      <!-- Разделитель -->
-      <div class="border-t border-gray-100"></div>
-
-      <!-- Футер -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <img 
-            :src="course.author.avatar" 
-            :alt="course.author.name"
-            class="w-6 h-6 sm:w-8 sm:h-8 rounded-full"
-          />
-          <span class="text-xs sm:text-sm text-gray-700 line-clamp-1 max-w-[120px] sm:max-w-[150px]">
-            {{ course.author.name }}
-          </span>
+      <!-- Футер с кнопками - всегда внизу -->
+      <div class="mt-auto">
+        <!-- Информация -->
+        <div class="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-4">
+          <span>{{ formatDuration(course.duration) }}</span>
+          <span>{{ course.modules.length }} модулей</span>
         </div>
-        <div class="flex items-center space-x-1">
-          <span class="text-yellow-400">★</span>
-          <span class="text-xs sm:text-sm font-medium">{{ course.rating }}</span>
-        </div>
-      </div>
 
-      <!-- Цена и кнопка -->
-      <div class="flex items-center justify-between mt-2">
-        <div class="text-sm sm:text-base lg:text-lg font-bold">
-          {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
+        <!-- Разделитель -->
+        <div class="border-t border-gray-100 mb-4"></div>
+
+        <!-- Кнопки -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-medium text-gray-900">
+              {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
+            </span>
+            <div class="flex items-center space-x-1">
+              <span class="text-yellow-400">★</span>
+              <span class="text-sm text-gray-600">{{ course.rating }}</span>
+            </div>
+          </div>
+          <button 
+            class="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors"
+            @click.stop="$emit('enroll', course.id)"
+          >
+            {{ course.isEnrolled ? 'Продолжить' : 'Записаться' }}
+          </button>
         </div>
-        <button
-          class="px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors text-xs sm:text-sm lg:text-base"
-          @click="handleEnroll"
-        >
-          Записаться
-        </button>
       </div>
     </div>
   </div>
