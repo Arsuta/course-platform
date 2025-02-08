@@ -3,9 +3,11 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLogo from '@/components/auth/AuthLogo.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRoute } from 'vue-router'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const route = useRoute()
 
 const form = ref({
   email: '',
@@ -25,7 +27,10 @@ const handleSubmit = async () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     await authStore.login(form.value.email, form.value.password)
-    router.push('/')
+    
+    // Проверяем, есть ли сохраненный путь для редиректа
+    const redirectPath = route.query.redirect as string
+    router.push(redirectPath || '/')
   } catch (e) {
     error.value = 'Неверный email или пароль'
   } finally {
