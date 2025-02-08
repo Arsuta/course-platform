@@ -23,7 +23,7 @@ const toggleProfile = () => {
   <div class="min-h-screen bg-gray-50 flex flex-col">
     <TopPanel @update:blur="isBlurred = $event" />
     <div 
-      class="flex-1 pt-16 transition-all duration-1000"
+      class="flex-1 transition-all duration-100 mt-16"
       :class="{ 'blur-sm': isBlurred }"
     >
       <div class="flex gap-6 mx-auto max-w-screen-2xl relative p-6">
@@ -44,6 +44,6 @@ const toggleProfile = () => {
         />
       </div>
     </div>
-    <Footer class="transition-all duration-1000" :class="{ 'blur-sm': isBlurred }" />
+    <Footer class="transition-all duration-100" :class="{ 'blur-sm': isBlurred }" />
   </div>
 </template>

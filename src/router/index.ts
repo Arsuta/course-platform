@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import MainLayout from '@/components/layout/MainLayout.vue'
 
 const router = createRouter({
@@ -11,12 +12,14 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          component: () => import('@/views/Home.vue')
+          component: () => import('@/views/Home.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'courses',
           name: 'courses',
-          component: () => import('@/views/Courses.vue')
+          component: () => import('@/views/Courses.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'about',
@@ -26,12 +29,17 @@ const router = createRouter({
         {
           path: 'settings',
           name: 'settings',
-          component: () => import('@/views/Settings.vue')
+          component: () => import('@/views/Settings.vue'),
+          meta: { requiresAuth: true }
         }
       ]
     },
     {
       path: '/auth',
+      name: 'auth',
+      redirect: '/auth/login',
+      component: () => import('@/views/auth/AuthLayout.vue'),
+      meta: { requiresGuest: true },
       children: [
         {
           path: 'login',
@@ -44,13 +52,25 @@ const router = createRouter({
           component: () => import('@/views/auth/Register.vue')
         },
         {
-          path: 'logout',
-          name: 'logout',
-          component: () => import('@/views/auth/Logout.vue')
+          path: 'forgot-password',
+          name: 'forgot-password',
+          component: () => import('@/views/auth/ForgotPassword.vue')
         }
       ]
     }
   ]
+})
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next({ name: 'login' })
+  } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    next({ name: 'home' })
+  } else {
+    next()
+  }
 })
 
 export default router

@@ -60,7 +60,7 @@ const togglePanel = (event: MouseEvent) => {
 <template>
   <div 
     ref="panelRef"
-    class="fixed top-0 left-0 z-50 w-full"
+    class="absolute top-0 left-0 z-50 w-full bg-gray-50"
   >
     <div class="relative">
       <!-- Закладка с логотипом -->
