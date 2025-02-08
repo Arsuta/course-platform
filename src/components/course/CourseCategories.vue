@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { defineProps } from 'vue'
 
 const categories = [
   { 
@@ -46,7 +46,9 @@ const categories = [
   }
 ]
 
-const showFreeOnly = ref(false)
+const props = defineProps<{
+  selectedCategory: string
+}>()
 </script>
 
 <template>
