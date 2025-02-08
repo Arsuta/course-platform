@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { coursesRoutes } from './courses'
 import { useAuthStore } from '@/stores/auth'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import HomeView from '@/views/Home.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,8 +14,7 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          component: () => import('@/views/Home.vue'),
-          meta: { requiresAuth: true }
+          component: HomeView
         },
         {
           path: 'courses',
@@ -21,6 +22,7 @@ const router = createRouter({
           component: () => import('@/views/Courses.vue'),
           meta: { requiresAuth: true }
         },
+        ...coursesRoutes,
         {
           path: 'about',
           name: 'about',
@@ -30,6 +32,12 @@ const router = createRouter({
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/Settings.vue'),
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'profile/:id',
+          name: 'profile',
+          component: () => import('@/views/Profile.vue'),
           meta: { requiresAuth: true }
         }
       ]
@@ -57,17 +65,18 @@ const router = createRouter({
           component: () => import('@/views/auth/ForgotPassword.vue')
         }
       ]
-    }
+    },
   ]
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
-  
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next({ name: 'login' })
-  } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    next({ name: 'home' })
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+
+  document.title = `${to.meta.title} | Course Platform`
+
+  if (requiresAuth && !authStore.isAuthenticated) {
+    next({ name: 'login', query: { redirect: to.fullPath } })
   } else {
     next()
   }

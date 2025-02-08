@@ -1,21 +1,59 @@
+import { apiClient } from './client'
 import type { Course, CourseResponse } from '@/types/course'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
-
 export const courseApi = {
-  async getPopular(): Promise<CourseResponse> {
-    const response = await fetch(`${API_URL}/courses/popular`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch popular courses')
+  async getCourses(params?: { 
+    page?: number
+    limit?: number
+    category?: string
+    level?: string
+    search?: string 
+  }): Promise<CourseResponse> {
+    try {
+      const { data } = await apiClient.get('/courses', { params })
+      return data
+    } catch (error) {
+      console.error('Failed to fetch courses:', error)
+      throw error
     }
-    return response.json()
   },
 
   async getCourse(id: number): Promise<Course> {
-    const response = await fetch(`${API_URL}/courses/${id}`)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch course ${id}`)
+    try {
+      const { data } = await apiClient.get(`/courses/${id}`)
+      return data
+    } catch (error) {
+      console.error(`Failed to fetch course ${id}:`, error)
+      throw error
     }
-    return response.json()
+  },
+
+  async getPopularCourses(): Promise<Course[]> {
+    try {
+      const { data } = await apiClient.get('/courses/popular')
+      return data
+    } catch (error) {
+      console.error('Failed to fetch popular courses:', error)
+      throw error
+    }
+  },
+
+  async enrollCourse(courseId: number): Promise<void> {
+    try {
+      await apiClient.post(`/courses/${courseId}/enroll`)
+    } catch (error) {
+      console.error(`Failed to enroll in course ${courseId}:`, error)
+      throw error
+    }
+  },
+
+  async getCourseProgress(courseId: number): Promise<number> {
+    try {
+      const { data } = await apiClient.get(`/courses/${courseId}/progress`)
+      return data.progress
+    } catch (error) {
+      console.error(`Failed to fetch progress for course ${courseId}:`, error)
+      throw error
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const DEFAULT_COLOR = '#FF5722'
+const DEFAULT_COLOR = '#5E761E'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => {
