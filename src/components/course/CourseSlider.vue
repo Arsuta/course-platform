@@ -43,6 +43,15 @@ onUnmounted(stopAutoplay)
 <template>
   <div v-if="courses.length > 0" class="relative">
     <div class="overflow-hidden rounded-xl">
+      <div class="absolute top-0 left-0 right-0 h-3 bg-white/20 z-10">
+        <div 
+          class="h-full bg-white transition-all duration-1000 ease-in-out"
+          :style="{ 
+            width: `${(currentSlide) * (100 / courses.length)}%`
+          }"
+        />
+      </div>
+
       <div 
         class="flex transition-transform duration-1000 ease-in-out"
         :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
@@ -80,19 +89,6 @@ onUnmounted(stopAutoplay)
     >
       <ChevronRightIcon class="w-6 h-6 text-white" />
     </button>
-
-    <!-- Индикатор прогресса -->
-    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-      <button
-        v-for="(_, index) in courses"
-        :key="index"
-        @click="currentSlide = index"
-        class="w-2 h-2 rounded-full transition-all duration-300 backdrop-blur-sm"
-        :class="currentSlide === index 
-          ? 'bg-white w-6' 
-          : 'bg-white/50 hover:bg-white/70'"
-      />
-    </div>
   </div>
   <div v-else class="flex justify-center items-center h-32 sm:h-48 lg:h-72">
     <p class="text-gray-500">Загрузка курсов...</p>
