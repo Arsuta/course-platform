@@ -4,6 +4,7 @@ import type { Course } from '@/types/course'
 import LogoMain from './LogoMain.vue'
 import LogoShort from './LogoShort.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { CourseGradient } from '@/constants/gradients'
 
 const settingsStore = useSettingsStore()
 const isExpanded = ref(false)
@@ -32,7 +33,8 @@ const selectedCourses = ref<Course[]>([
       avatar: 'https://picsum.photos/100/100?random=1'
     },
     updatedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    gradient: 'from-green-400 to-green-500' as CourseGradient
   }
 ])
 

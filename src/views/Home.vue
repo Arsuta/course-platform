@@ -13,6 +13,10 @@ onMounted(async () => {
   popularCourses.value = await CourseModel.getPopularCourses()
 })
 
+const formatPrice = (price: number): string => {
+  return price.toLocaleString('ru-RU') + ' ₽'
+}
+
 const handleEnroll = async (courseId: number) => {
   try {
     await CourseModel.enrollCourse(courseId)
@@ -34,6 +38,7 @@ const handleEnroll = async (courseId: number) => {
         <h2 class="text-3xl font-bold text-gray-900 mb-8">Популярные курсы</h2>
         <CourseSlider 
           :courses="popularCourses" 
+          :formatPrice="formatPrice"
           @enroll="handleEnroll"
         />
       </div>

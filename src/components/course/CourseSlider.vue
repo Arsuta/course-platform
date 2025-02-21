@@ -6,6 +6,7 @@ import CourseCard from './CourseCard.vue'
 
 const props = defineProps<{
   courses: Course[]
+  formatPrice: (price: number) => string
 }>()
 
 defineEmits<{
@@ -43,9 +44,9 @@ onUnmounted(stopAutoplay)
 <template>
   <div v-if="courses.length > 0" class="relative">
     <div class="overflow-hidden rounded-xl">
-      <div class="absolute top-0 left-0 right-0 h-3 bg-white/20 z-10">
+      <div class="absolute top-0 left-0 right-0 h-3 bg-white/30 z-10">
         <div 
-          class="h-full bg-white transition-all duration-1000 ease-in-out"
+          class="h-full bg-white/90 transition-all duration-1000 ease-in-out"
           :style="{ 
             width: `${(currentSlide) * (100 / courses.length)}%`
           }"
@@ -59,13 +60,23 @@ onUnmounted(stopAutoplay)
         <div 
           v-for="course in courses" 
           :key="course.id"
-          class="w-full flex-shrink-0"
+          class="w-full flex-shrink-0 p-4 relative"
         >
-          <div class="max-w-[95%] lg:max-w-[85%] mx-auto">
-            <CourseCard 
-              :course="course" 
-              @enroll="$emit('enroll', course.id)"
-            />
+          <div class="absolute inset-0 bg-cover bg-center" :style="{ backgroundImage: `url(${course.image})` }"></div>
+          <div class="relative z-10 bg-white bg-opacity-90 rounded-lg shadow-lg p-6 flex flex-col transition-transform duration-300 hover:scale-105">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ course.title }}</h3>
+            <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ course.description }}</p>
+            <div class="flex items-center justify-between mt-auto">
+              <span class="text-lg font-bold text-gray-900">
+                {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
+              </span>
+              <button 
+                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                @click="$emit('enroll', course.id)"
+              >
+                {{ course.isEnrolled ? 'Продолжить' : 'Записаться' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -100,5 +111,11 @@ onUnmounted(stopAutoplay)
   overflow: hidden;
 }
 
-/* Удаляем старые медиа-запросы, так как теперь используем процентное соотношение */
+.bg-white {
+  background-color: #ffffff;
+}
+
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+}
 </style>

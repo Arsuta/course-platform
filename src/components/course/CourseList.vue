@@ -37,7 +37,7 @@ const handleEnroll = (courseId: number) => {
         v-model="searchQuery"
         type="text"
         placeholder="Поиск курсов..."
-        class="flex-1 min-w-[200px] px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        class="flex-1 min-w-[100px] px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
       />
       
       <select
@@ -63,14 +63,18 @@ const handleEnroll = (courseId: number) => {
     </div>
 
     <!-- Список курсов -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <CourseCard
+    <ul class="space-y-4">
+      <li
         v-for="course in filteredCourses"
         :key="course.id"
-        :course="course"
-        @enroll="handleEnroll"
-      />
-    </div>
+        class="bg-white rounded-lg shadow-md p-4 flex flex-col"
+      >
+        <CourseCard
+          :course="course"
+          @enroll="handleEnroll"
+        />
+      </li>
+    </ul>
 
     <!-- Сообщение, если курсы не найдены -->
     <div
