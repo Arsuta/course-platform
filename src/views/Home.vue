@@ -6,34 +6,55 @@ import CourseCategories from '@/components/course/CourseCategories.vue'
 import { CourseModel } from '@/models/course'
 import type { Course } from '@/types/course'
 
-const courses = ref<Course[]>([])
+const popularCourses = ref<Course[]>([])
+const selectedCategory = ref('')
 
 onMounted(async () => {
-  courses.value = await CourseModel.getPopularCourses()
+  popularCourses.value = await CourseModel.getPopularCourses()
 })
+
+const formatPrice = (price: number): string => {
+  return price.toLocaleString('ru-RU') + ' ₽'
+}
+
+const handleEnroll = async (courseId: number) => {
+  try {
+    await CourseModel.enrollCourse(courseId)
+    // TODO: Показать уведомление об успешной записи
+  } catch (error) {
+    console.error('Failed to enroll:', error)
+    // TODO: Показать уведомление об ошибке
+  }
+}
 </script>
 
 <template>
   <div class="space-y-16">
     <HomeHeader />
     
+    <!-- Популярные курсы (слайдер) -->
+    <section class="bg-gray-50">
+      <div class="container mx-auto px-4 py-12">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Популярные курсы</h2>
+        <CourseSlider 
+          :courses="popularCourses" 
+          :formatPrice="formatPrice"
+          @enroll="handleEnroll"
+        />
+      </div>
+    </section>
+
     <div class="container mx-auto px-4 space-y-16">
       <!-- Описание платформы -->
       <div class="max-w-3xl mx-auto text-center space-y-6">
         <h2 class="text-3xl font-bold text-gray-900">Образовательная платформа нового поколения</h2>
         <p class="text-lg text-gray-600 leading-relaxed">
-          Мы создаем пока...
+          Изучайте актуальные навыки у лучших преподавателей
         </p>
       </div>
 
-      <!-- Популярные курсы -->
-      <div>
-        <h2 class="text-3xl font-bold mb-8">Попки курсы</h2>
-        <CourseSlider :courses="courses" />
-      </div>
-
       <!-- Категории -->
-      <CourseCategories />
+      <CourseCategories :selectedCategory="selectedCategory" />
     </div>
   </div>
 </template>

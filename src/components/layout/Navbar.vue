@@ -25,8 +25,9 @@ defineEmits<{
 <template>
   <nav
     @click="$emit('toggle')"
-    class="bg-white shadow-lg transition-all duration-500 ease-in-out cursor-pointer hover:shadow-xl hover:scale-[1.02] p-2"
+    class="bg-white shadow-lg transition-all duration-500 ease-in-out cursor-pointer hover:shadow-xl hover:scale-[1.02] p-2 min-w-[64px]"
     :class="[isCollapsed ? 'w-16' : 'w-64']"
+    style="min-height: fit-content;"
   >
     <div class="mb-4">
       <Bars3Icon class="h-6 w-6 text-gray-600 mx-auto" />

@@ -11,6 +11,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --vh: 1vh;
+  --sidebar-width: 64px;
+  --profile-width: 72px;
 }
 
 a {
@@ -75,5 +79,39 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .sticky-sidebar {
+    position: sticky;
+    top: 1.5rem;
+    height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+  
+  .sidebar-container {
+    min-width: var(--sidebar-width);
+    max-width: 16rem;
+  }
+  
+  .profile-container {
+    min-width: var(--profile-width);
+    max-width: 16rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Для поддержки масштабирования */
+@media screen and (max-width: 100%) {
+  .sidebar-container,
+  .profile-container {
+    flex-shrink: 0;
+    min-width: auto;
   }
 }
