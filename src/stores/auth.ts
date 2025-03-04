@@ -9,15 +9,19 @@ interface User {
   xp?: number
   followers?: number[]
   following?: number[]
+  password: string
+  subscriptions: string[]
 }
 
 interface AuthState {
   user: User | null
   token: string | null
+  users: User[]
+  currentUser: User | null
 }
 
 // Моковые данные пользователей
-const mockUsers = [
+const mockUsers: User[] = [
   {
     id: 1,
     name: 'Арсений Канеп',
@@ -26,8 +30,9 @@ const mockUsers = [
     avatar: '/images/Arseniy.jpg',
     level: 15,
     xp: 750,
-    followers: [2, 3],
-    following: [2]
+    followers: [1, 2, 3, 4, 5],
+    following: [1, 2, 3, 4, 5],
+    subscriptions: ["andrey@gmail.com"]
   },
   {
     id: 2,
@@ -37,8 +42,9 @@ const mockUsers = [
     avatar: '/images/Ivan.jpg',
     level: 12,
     xp: 450,
-    followers: [1, 3],
-    following: [1, 3]
+    followers: [1, 2, 3, 4, 5],
+    following: [1, 2, 3, 4, 5],
+    subscriptions: ["antonenko.maksim@gmail.com"]
   },
   {
     id: 3,
@@ -48,15 +54,42 @@ const mockUsers = [
     avatar: '/images/Math.jpg',
     level: 18,
     xp: 920,
-    followers: [1, 2],
-    following: [2]
+    followers: [1, 2, 3, 4, 5],
+    following: [1, 2, 3, 4, 5],
+    subscriptions: ["andrey@gmail.com"]
+  },
+  {
+    id: 4,
+    name: "Антоненко Максим",
+    email: "antonenko.maksim@gmail.com",
+    password: "iLoveMisis2025",
+    avatar: "/images/Maxim.jpg",
+    level: 18,
+    xp: 920,
+    followers: [1, 2, 3, 4, 5],
+    following: [1, 2, 3, 4, 5],
+    subscriptions: ["andrey@gmail.com"]
+  },
+  {
+    id: 5,
+    name: "Андрей",
+    email: "andrey@gmail.com",
+    password: "iLoveMisis2025",
+    avatar: "/images/Andrey.jpg",
+    level: 18,
+    xp: 920,
+    followers: [1, 2, 3, 4, 5],
+    following: [1, 2, 3, 4, 5],
+    subscriptions: ["antonenko.maksim@gmail.com"]
   }
 ]
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    token: localStorage.getItem('token')
+    token: localStorage.getItem('token'),
+    users: mockUsers,
+    currentUser: null
   }),
 
   getters: {
@@ -112,7 +145,9 @@ export const useAuthStore = defineStore('auth', {
         level: user.level,
         xp: user.xp,
         followers: user.followers,
-        following: user.following
+        following: user.following,
+        password: user.password,
+        subscriptions: user.subscriptions
       }
       
       localStorage.setItem('token', token)
@@ -135,7 +170,8 @@ export const useAuthStore = defineStore('auth', {
         level: 1,
         xp: 0,
         followers: [],
-        following: []
+        following: [],
+        subscriptions: []
       }
 
       mockUsers.push(newUser)
