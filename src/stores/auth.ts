@@ -30,8 +30,8 @@ const mockUsers: User[] = [
     avatar: '/images/Arseniy.jpg',
     level: 15,
     xp: 750,
-    followers: [1, 2, 3, 4, 5],
-    following: [1, 2, 3, 4, 5],
+    followers: [2, 3, 4, 5],
+    following: [2, 3, 4, 5],
     subscriptions: ["andrey@gmail.com"]
   },
   {
@@ -42,8 +42,8 @@ const mockUsers: User[] = [
     avatar: '/images/Ivan.jpg',
     level: 12,
     xp: 450,
-    followers: [1, 2, 3, 4, 5],
-    following: [1, 2, 3, 4, 5],
+    followers: [1, 3, 4, 5],
+    following: [1, 3, 4, 5],
     subscriptions: ["antonenko.maksim@gmail.com"]
   },
   {
@@ -54,8 +54,8 @@ const mockUsers: User[] = [
     avatar: '/images/Math.jpg',
     level: 18,
     xp: 920,
-    followers: [1, 2, 3, 4, 5],
-    following: [1, 2, 3, 4, 5],
+    followers: [1, 2, 4, 5],
+    following: [1, 2, 4, 5],
     subscriptions: ["andrey@gmail.com"]
   },
   {
@@ -66,8 +66,8 @@ const mockUsers: User[] = [
     avatar: "/images/Maxim.jpg",
     level: 18,
     xp: 920,
-    followers: [1, 2, 3, 4, 5],
-    following: [1, 2, 3, 4, 5],
+    followers: [1, 2, 3, 5],
+    following: [1, 2, 3, 5],
     subscriptions: ["andrey@gmail.com"]
   },
   {
@@ -78,9 +78,9 @@ const mockUsers: User[] = [
     avatar: "/images/Andrey.jpg",
     level: 18,
     xp: 920,
-    followers: [1, 2, 3, 4, 5],
-    following: [1, 2, 3, 4, 5],
-    subscriptions: ["antonenko.maksim@gmail.com"]
+    followers: [1, 2, 3, 4],
+    following: [1, 2, 3, 4],
+    subscriptions: ["zakomaldin.ivan@gmail.com"]
   }
 ]
 
