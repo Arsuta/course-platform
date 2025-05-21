@@ -2,10 +2,10 @@ pipeline {
     agent any
     
     parameters {
-        choice(
+        string(
             name: 'BRANCH',
-            choices: ['main', 'develop', 'feature/*'],
-            description: 'Выберите ветку для сборки'
+            defaultValue: 'main',
+            description: 'Введите имя ветки для сборки (например: main, develop, feature/your-feature)'
         )
         string(
             name: 'VERSION',
