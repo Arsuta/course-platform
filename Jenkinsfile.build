@@ -30,9 +30,9 @@ pipeline {
                 script {
                     sh """
                         echo "Checking registry accessibility..."
-                        curl -s http://${DOCKER_REGISTRY}/v2/_catalog > /dev/null || exit 1
+                        curl -v http://${DOCKER_REGISTRY}/v2/_catalog
                         echo "Available images:"
-                        curl -s http://${DOCKER_REGISTRY}/v2/_catalog | jq .
+                        curl -v http://${DOCKER_REGISTRY}/v2/_catalog | jq .
                     """
                 }
             }
