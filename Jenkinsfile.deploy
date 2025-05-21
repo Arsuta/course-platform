@@ -1,0 +1,142 @@
+def call() {
+    pipeline {
+        agent any
+        
+        parameters {
+            choice(
+                name: 'ENVIRONMENT',
+                choices: ['dev', 'prod'],
+                description: 'Выберите окружение для деплоя'
+            )
+            string(
+                name: 'VERSION',
+                defaultValue: 'latest',
+                description: 'Версия образа для деплоя (например: 1.0.0 или latest)'
+            )
+        }
+        
+        environment {
+            APP_NAME = 'course-platform'
+            DOCKER_REGISTRY = "45.132.1.169:32000"
+            DOCKER_IMAGE = "${APP_NAME}:${params.VERSION}"
+            
+            BASE_DOMAIN = 'eduroam.space'
+            
+            ENV_VARS = [
+                dev: [
+                    VITE_API_URL: "https://dev-api.${BASE_DOMAIN}",
+                    K8S_NAMESPACE: "course-platform-dev",
+                    HOST: "dev.${BASE_DOMAIN}",
+                    PORT: "5050"
+                ],
+                prod: [
+                    VITE_API_URL: "https://api.${BASE_DOMAIN}",
+                    K8S_NAMESPACE: "course-platform-prod",
+                    HOST: "${BASE_DOMAIN}",
+                    PORT: "6060"
+                ]
+            ]
+        }
+        
+        stages {
+            stage('Verify Image') {
+                steps {
+                    script {
+                        sh """
+                            echo "Checking if image exists..."
+                            curl -s http://${DOCKER_REGISTRY}/v2/${APP_NAME}/tags/list | jq .
+                            
+                            # check specific version
+                            if [ "${params.VERSION}" != "latest" ]; then
+                                if ! curl -s http://${DOCKER_REGISTRY}/v2/${APP_NAME}/tags/list | jq -e ".tags[] | select(. == \"${params.VERSION}\")" > /dev/null; then
+                                    error "Version ${params.VERSION} not found in registry!"
+                                fi
+                            fi
+                        """
+                    }
+                }
+            }
+            
+            stage('Preparation') {
+                steps {
+                    script {
+                        if (params.ENVIRONMENT == 'prod' && params.VERSION == 'latest') {
+                            error "Production deployment is not allowed with 'latest' tag!"
+                        }
+                        
+                        cleanWs()
+                        
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/main"]],
+                            userRemoteConfigs: [[
+                                url: 'YOUR_GIT_REPO_URL',
+                                credentialsId: 'git-credentials'
+                            ]]
+                        ])
+                        
+                        sh """
+                            # replace variables in manifest
+                            sed -i 's|\${ENVIRONMENT}|${params.ENVIRONMENT}|g' k8s/manifests.yaml
+                            sed -i 's|\${VERSION}|${params.VERSION}|g' k8s/manifests.yaml
+                            sed -i 's|\${API_URL}|${ENV_VARS[params.ENVIRONMENT].VITE_API_URL}|g' k8s/manifests.yaml
+                            sed -i 's|\${HOST}|${ENV_VARS[params.ENVIRONMENT].HOST}|g' k8s/manifests.yaml
+                            sed -i 's|\${DOCKER_REGISTRY}|${DOCKER_REGISTRY}|g' k8s/manifests.yaml
+                            sed -i 's|\${PORT}|${ENV_VARS[params.ENVIRONMENT].PORT}|g' k8s/manifests.yaml
+                        """
+                    }
+                }
+            }
+            
+            stage('Deploy to Kubernetes') {
+                steps {
+                    script {
+                        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                            sh """
+                                # create namespace
+                                kubectl --kubeconfig=${KUBECONFIG} create namespace ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                                
+                                # check manifest
+                                kubectl --kubeconfig=${KUBECONFIG} apply -f k8s/manifests.yaml
+                                
+                                # waiting pods
+                                kubectl --kubeconfig=${KUBECONFIG} rollout status deployment/course-platform-${params.ENVIRONMENT} -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE}
+                                
+                                # verify deployment
+                                echo "Deployment status:"
+                                kubectl --kubeconfig=${KUBECONFIG} get pods -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT}
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        
+        post {
+            always {
+                cleanWs()
+            }
+            success {
+                script {
+                    echo """
+                        ✅ Deployment successful!
+                        Environment: ${params.ENVIRONMENT}
+                        Version: ${params.VERSION}
+                        Application URL: https://${ENV_VARS[params.ENVIRONMENT].HOST}
+                        API URL: ${ENV_VARS[params.ENVIRONMENT].VITE_API_URL}
+                        Namespace: ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE}
+                    """
+                }
+            }
+            failure {
+                script {
+                    echo """
+                        ❌ Deployment failed!
+                        Environment: ${params.ENVIRONMENT}
+                        Version: ${params.VERSION}
+                    """
+                }
+            }
+        }
+    }
+} 
