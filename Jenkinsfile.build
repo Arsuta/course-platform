@@ -17,7 +17,7 @@ pipeline {
     environment {
         NODE_VERSION = '18'
         APP_NAME = 'course-platform'
-        DOCKER_REGISTRY = "localhost:32000"
+        DOCKER_REGISTRY = "45.132.1.169:32000"
         
         VERSION = "${params.VERSION ?: sh(script: 'date +%Y.%m.%d-%H%M%S', returnStdout: true).trim()}"
         DOCKER_IMAGE = "${APP_NAME}:${VERSION}"
