@@ -20,7 +20,6 @@ def call() {
             APP_NAME = 'course-platform'
             DOCKER_REGISTRY = "45.132.1.169:32000"
             
-            // Генерация версии если не указана
             VERSION = "${params.VERSION ?: sh(script: 'date +%Y.%m.%d-%H%M%S', returnStdout: true).trim()}"
             DOCKER_IMAGE = "${APP_NAME}:${VERSION}"
             DOCKER_IMAGE_LATEST = "${APP_NAME}:latest"
@@ -42,15 +41,24 @@ def call() {
             
             stage('Preparation') {
                 steps {
-                    cleanWs()
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "*/${params.BRANCH}"]],
-                        userRemoteConfigs: [[
-                            url: 'YOUR_GIT_REPO_URL',
-                            credentialsId: 'git-credentials'
-                        ]]
-                    ])
+                    script {
+                        cleanWs()
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${params.BRANCH}"]],
+                            userRemoteConfigs: [[
+                                url: 'https://github.com/Arsuta/course-platform',
+                                credentialsId: 'git-credentials'
+                            ]]
+                        ])
+                        
+                        echo """
+                            Starting build:
+                            - Branch: ${params.BRANCH}
+                            - Version: ${VERSION}
+                            - Registry: ${DOCKER_REGISTRY}
+                        """
+                    }
                 }
             }
             
@@ -65,36 +73,42 @@ def call() {
             
             stage('Install Dependencies') {
                 steps {
-                    sh 'npm ci'
+                    dir('course-platform') {
+                        sh 'npm ci'
+                    }
                 }
             }
             
             stage('Build') {
                 steps {
-                    sh 'npm run build'
+                    dir('course-platform') {
+                        sh 'npm run build'
+                    }
                 }
             }
             
             stage('Docker Build and Push') {
                 steps {
                     script {
-                        sh """
-                            # create daemon.json
-                            echo '{"insecure-registries": ["${DOCKER_REGISTRY}"]}' | sudo tee /etc/docker/daemon.json
-                            sudo systemctl restart docker
-                            
-                            # build images
-                            docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE} .
-                            docker tag ${DOCKER_REGISTRY}/${DOCKER_IMAGE} ${DOCKER_REGISTRY}/${DOCKER_IMAGE_LATEST}
-                            
-                            # push images
-                            docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}
-                            docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_LATEST}
-                            
-                            # verify push
-                            echo "Pushed images:"
-                            curl -s http://${DOCKER_REGISTRY}/v2/${APP_NAME}/tags/list | jq .
-                        """
+                        dir('course-platform') {
+                            sh """
+                                # create daemon.json
+                                echo '{"insecure-registries": ["${DOCKER_REGISTRY}"]}' | sudo tee /etc/docker/daemon.json
+                                sudo systemctl restart docker
+                                
+                                # build images
+                                docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE} .
+                                docker tag ${DOCKER_REGISTRY}/${DOCKER_IMAGE} ${DOCKER_REGISTRY}/${DOCKER_IMAGE_LATEST}
+                                
+                                # push images
+                                docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}
+                                docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_LATEST}
+                                
+                                # verify push
+                                echo "Pushed images:"
+                                curl -s http://${DOCKER_REGISTRY}/v2/${APP_NAME}/tags/list | jq .
+                            """
+                        }
                     }
                 }
             }
@@ -102,7 +116,6 @@ def call() {
             stage('Create Release Tag') {
                 steps {
                     script {
-                        // Создаем тег в git с версией
                         sh """
                             git config --global user.email "jenkins@example.com"
                             git config --global user.name "Jenkins"

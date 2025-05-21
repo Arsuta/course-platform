@@ -27,13 +27,15 @@ def call() {
                     VITE_API_URL: "https://dev-api.${BASE_DOMAIN}",
                     K8S_NAMESPACE: "course-platform-dev",
                     HOST: "dev.${BASE_DOMAIN}",
-                    PORT: "5050"
+                    PORT: "5050",
+                    REPLICAS: "1"
                 ],
                 prod: [
                     VITE_API_URL: "https://api.${BASE_DOMAIN}",
                     K8S_NAMESPACE: "course-platform-prod",
                     HOST: "${BASE_DOMAIN}",
-                    PORT: "6060"
+                    PORT: "6060",
+                    REPLICAS: "2"
                 ]
             ]
         }
@@ -46,7 +48,7 @@ def call() {
                             echo "Checking if image exists..."
                             curl -s http://${DOCKER_REGISTRY}/v2/${APP_NAME}/tags/list | jq .
                             
-                            # check specific version
+                            # Проверяем конкретную версию
                             if [ "${params.VERSION}" != "latest" ]; then
                                 if ! curl -s http://${DOCKER_REGISTRY}/v2/${APP_NAME}/tags/list | jq -e ".tags[] | select(. == \"${params.VERSION}\")" > /dev/null; then
                                     error "Version ${params.VERSION} not found in registry!"
@@ -70,19 +72,31 @@ def call() {
                             $class: 'GitSCM',
                             branches: [[name: "*/main"]],
                             userRemoteConfigs: [[
-                                url: 'YOUR_GIT_REPO_URL',
+                                url: 'https://github.com/Arsuta/course-platform',
                                 credentialsId: 'git-credentials'
                             ]]
                         ])
                         
+                        echo """
+                            Starting deployment:
+                            - Environment: ${params.ENVIRONMENT}
+                            - Version: ${params.VERSION}
+                            - Namespace: ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE}
+                            - API URL: ${ENV_VARS[params.ENVIRONMENT].VITE_API_URL}
+                            - Host: ${ENV_VARS[params.ENVIRONMENT].HOST}
+                            - Port: ${ENV_VARS[params.ENVIRONMENT].PORT}
+                            - Replicas: ${ENV_VARS[params.ENVIRONMENT].REPLICAS}
+                        """
+                        
                         sh """
                             # replace variables in manifest
-                            sed -i 's|\${ENVIRONMENT}|${params.ENVIRONMENT}|g' k8s/manifests.yaml
-                            sed -i 's|\${VERSION}|${params.VERSION}|g' k8s/manifests.yaml
-                            sed -i 's|\${API_URL}|${ENV_VARS[params.ENVIRONMENT].VITE_API_URL}|g' k8s/manifests.yaml
-                            sed -i 's|\${HOST}|${ENV_VARS[params.ENVIRONMENT].HOST}|g' k8s/manifests.yaml
-                            sed -i 's|\${DOCKER_REGISTRY}|${DOCKER_REGISTRY}|g' k8s/manifests.yaml
-                            sed -i 's|\${PORT}|${ENV_VARS[params.ENVIRONMENT].PORT}|g' k8s/manifests.yaml
+                            sed -i 's|\${ENVIRONMENT}|${params.ENVIRONMENT}|g' deployment.yaml
+                            sed -i 's|\${VERSION}|${params.VERSION}|g' deployment.yaml
+                            sed -i 's|\${API_URL}|${ENV_VARS[params.ENVIRONMENT].VITE_API_URL}|g' deployment.yaml
+                            sed -i 's|\${HOST}|${ENV_VARS[params.ENVIRONMENT].HOST}|g' deployment.yaml
+                            sed -i 's|\${DOCKER_REGISTRY}|${DOCKER_REGISTRY}|g' deployment.yaml
+                            sed -i 's|\${PORT}|${ENV_VARS[params.ENVIRONMENT].PORT}|g' deployment.yaml
+                            sed -i 's|\${REPLICAS}|${ENV_VARS[params.ENVIRONMENT].REPLICAS}|g' deployment.yaml
                         """
                     }
                 }
@@ -93,18 +107,51 @@ def call() {
                     script {
                         withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                             sh """
-                                # create namespace
+                                # create namespace if not exists
                                 kubectl --kubeconfig=${KUBECONFIG} create namespace ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                                 
-                                # check manifest
-                                kubectl --kubeconfig=${KUBECONFIG} apply -f k8s/manifests.yaml
+                                # validate manifest
+                                kubectl --kubeconfig=${KUBECONFIG} apply -f deployment.yaml --dry-run=client
                                 
-                                # waiting pods
-                                kubectl --kubeconfig=${KUBECONFIG} rollout status deployment/course-platform-${params.ENVIRONMENT} -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE}
+                                # apply manifest
+                                kubectl --kubeconfig=${KUBECONFIG} apply -f deployment.yaml
+                                
+                                # wait for rollout
+                                kubectl --kubeconfig=${KUBECONFIG} rollout status deployment/course-platform-${params.ENVIRONMENT} -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} --timeout=300s
                                 
                                 # verify deployment
                                 echo "Deployment status:"
                                 kubectl --kubeconfig=${KUBECONFIG} get pods -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT}
+                                
+                                # verify service
+                                echo "Service status:"
+                                kubectl --kubeconfig=${KUBECONFIG} get svc -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT}
+                                
+                                # verify ingress
+                                echo "Ingress status:"
+                                kubectl --kubeconfig=${KUBECONFIG} get ingress -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT}
+                            """
+                        }
+                    }
+                }
+            }
+            
+            stage('Verify Deployment') {
+                steps {
+                    script {
+                        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                            sh """
+                                # check pod logs
+                                echo "Pod logs:"
+                                kubectl --kubeconfig=${KUBECONFIG} logs -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT} --tail=50
+                                
+                                # check pod status
+                                echo "Pod status:"
+                                kubectl --kubeconfig=${KUBECONFIG} get pods -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT} -o wide
+                                
+                                # check endpoints
+                                echo "Service endpoints:"
+                                kubectl --kubeconfig=${KUBECONFIG} get endpoints -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT}
                             """
                         }
                     }
@@ -125,6 +172,7 @@ def call() {
                         Application URL: https://${ENV_VARS[params.ENVIRONMENT].HOST}
                         API URL: ${ENV_VARS[params.ENVIRONMENT].VITE_API_URL}
                         Namespace: ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE}
+                        Replicas: ${ENV_VARS[params.ENVIRONMENT].REPLICAS}
                     """
                 }
             }
@@ -135,6 +183,16 @@ def call() {
                         Environment: ${params.ENVIRONMENT}
                         Version: ${params.VERSION}
                     """
+                    
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                        sh """
+                            echo "Pod logs on failure:"
+                            kubectl --kubeconfig=${KUBECONFIG} logs -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT} --tail=100
+                            
+                            echo "Pod status on failure:"
+                            kubectl --kubeconfig=${KUBECONFIG} describe pods -n ${ENV_VARS[params.ENVIRONMENT].K8S_NAMESPACE} -l app=course-platform-${params.ENVIRONMENT}
+                        """
+                    }
                 }
             }
         }
