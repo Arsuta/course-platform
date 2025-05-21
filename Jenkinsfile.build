@@ -124,6 +124,14 @@ pipeline {
                 }
             }
         }
+        
+        stage('Debug Network') {
+            steps {
+                sh 'whoami'
+                sh 'curl -v http://45.132.1.169:32000/v2/_catalog || echo "curl failed"'
+                sh 'curl -v http://localhost:32000/v2/_catalog || echo "curl failed"'
+            }
+        }
     }
     
     post {
