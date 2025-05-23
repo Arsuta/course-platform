@@ -1,215 +1,163 @@
 import { defineStore } from 'pinia'
-
-interface User {
-  id: number
-  name: string
-  email: string
-  avatar?: string
-  level?: number
-  xp?: number
-  followers?: number[]
-  following?: number[]
-  password: string
-  subscriptions: string[]
-}
+import apiClient from '@/api/client'
+import type { User, TokenPair, UserLogin, UserCreate, VerificationRequest, PasswordResetRequest, PasswordResetConfirm, RefreshInput } from '@/types/api'
 
 interface AuthState {
   user: User | null
   token: string | null
-  users: User[]
-  currentUser: User | null
+  isVerifying: boolean
+  verificationEmail: string | null
 }
-
-// Моковые данные пользователей
-const mockUsers: User[] = [
-  {
-    id: 1,
-    name: 'Арсений Канеп',
-    email: 'kanep.arseniy@gmail.com',
-    password: 'Zaebal2001',
-    avatar: '/images/Arseniy.jpg',
-    level: 15,
-    xp: 750,
-    followers: [2, 3, 4, 5],
-    following: [2, 3, 4, 5],
-    subscriptions: ["andrey@gmail.com"]
-  },
-  {
-    id: 2,
-    name: 'Иван Закомалдин',
-    email: 'zakomaldin.ivan@gmail.com',
-    password: 'Zaebal2001',
-    avatar: '/images/Ivan.jpg',
-    level: 12,
-    xp: 450,
-    followers: [1, 3, 4, 5],
-    following: [1, 3, 4, 5],
-    subscriptions: ["antonenko.maksim@gmail.com"]
-  },
-  {
-    id: 3,
-    name: 'Матвей Ручин',
-    email: 'ruchin.mathway@gmail.com',
-    password: 'Zaebal2001',
-    avatar: '/images/Math.jpg',
-    level: 18,
-    xp: 920,
-    followers: [1, 2, 4, 5],
-    following: [1, 2, 4, 5],
-    subscriptions: ["andrey@gmail.com"]
-  },
-  {
-    id: 4,
-    name: "Антоненко Максим",
-    email: "antonenko.maksim@gmail.com",
-    password: "iLoveMisis2025",
-    avatar: "/images/Maxim.jpg",
-    level: 18,
-    xp: 920,
-    followers: [1, 2, 3, 5],
-    following: [1, 2, 3, 5],
-    subscriptions: ["andrey@gmail.com"]
-  },
-  {
-    id: 5,
-    name: "Андрей",
-    email: "andrey@gmail.com",
-    password: "iLoveMisis2025",
-    avatar: "/images/Andrey.jpg",
-    level: 18,
-    xp: 920,
-    followers: [1, 2, 3, 4],
-    following: [1, 2, 3, 4],
-    subscriptions: ["zakomaldin.ivan@gmail.com"]
-  }
-]
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
     token: localStorage.getItem('token'),
-    users: mockUsers,
-    currentUser: null
+    isVerifying: false,
+    verificationEmail: null
   }),
 
   getters: {
-    isAuthenticated: (state) => !!state.token,
-    currentUser: (state) => state.user
+    isAuthenticated: (state: AuthState): boolean => !!state.token,
+    currentUser: (state: AuthState): User | null => state.user
   },
 
   actions: {
-    getUserById(id: number) {
-      const user = mockUsers.find(u => u.id === id)
-      if (!user) return null
-      
-      const { password, ...userWithoutPassword } = user
-      return userWithoutPassword
-    },
-
-    addXP(amount: number) {
-      if (!this.user) return
-      
-      // Находим пользователя в моковых данных
-      const mockUser = mockUsers.find(u => u.id === this.user!.id)
-      if (!mockUser) return
-
-      // Обновляем XP
-      mockUser.xp = (mockUser.xp || 0) + amount
-      this.user.xp = mockUser.xp
-
-      // Проверяем, нужно ли повысить уровень
-      const nextLevelXP = Math.pow((mockUser.level || 1), 2) * 100
-      if (mockUser.xp >= nextLevelXP) {
-        mockUser.level = (mockUser.level || 1) + 1
-        this.user.level = mockUser.level
-      }
-    },
-
-    async login(email: string, password: string) {
-      // Имитация проверки учетных данных
-      const user = mockUsers.find(u => u.email === email && u.password === password)
-      
-      if (!user) {
+    async login(email: string, password: string): Promise<void> {
+      try {
+        const data: UserLogin = { email, password }
+        await apiClient.post('/login', data)
+        this.isVerifying = true
+        this.verificationEmail = email
+      } catch (error) {
         throw new Error('Неверный email или пароль')
       }
-
-      // Генерация простого токена (в реальном приложении будет другая логика)
-      const token = btoa(user.email + Date.now())
-      
-      this.token = token
-      this.user = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        level: user.level,
-        xp: user.xp,
-        followers: user.followers,
-        following: user.following,
-        password: user.password,
-        subscriptions: user.subscriptions
-      }
-      
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(this.user))
     },
 
-    async register(name: string, email: string, password: string) {
-      // Проверка, не занят ли email
-      if (mockUsers.some(u => u.email === email)) {
-        throw new Error('Этот email уже зарегистрирован')
+    async verifyLogin(code: string): Promise<void> {
+      if (!this.verificationEmail) {
+        throw new Error('Email не найден')
       }
 
-      // В реальном приложении здесь будет запрос к API
-      const newUser = {
-        id: mockUsers.length + 1,
-        name,
-        email,
-        password,
-        avatar: 'https://via.placeholder.com/128',
-        level: 1,
-        xp: 0,
-        followers: [],
-        following: [],
-        subscriptions: []
+      try {
+        const data: VerificationRequest = {
+          email: this.verificationEmail,
+          code
+        }
+        const response = await apiClient.post<TokenPair>('/verify-login', data)
+
+        const { access_token, refresh_token } = response.data
+        this.token = access_token
+        localStorage.setItem('token', access_token)
+        localStorage.setItem('refresh_token', refresh_token)
+        
+        this.isVerifying = false
+        this.verificationEmail = null
+      } catch (error) {
+        throw new Error('Неверный код подтверждения')
       }
-
-      mockUsers.push(newUser)
-
-      // Автоматический вход после регистрации
-      await this.login(email, password)
     },
 
-    async logout() {
+    async register(email: string, password: string, role: 'student' | 'author' | 'admin'): Promise<void> {
+      try {
+        const data: UserCreate = { email, password, role }
+        await apiClient.post('/register', data)
+        this.isVerifying = true
+        this.verificationEmail = email
+      } catch (error) {
+        throw new Error('Ошибка при регистрации')
+      }
+    },
+
+    async verifyEmail(code: string): Promise<void> {
+      if (!this.verificationEmail) {
+        throw new Error('Email не найден')
+      }
+
+      try {
+        const data: VerificationRequest = {
+          email: this.verificationEmail,
+          code
+        }
+        const response = await apiClient.post<TokenPair>('/verify-email', data)
+
+        const { access_token, refresh_token } = response.data
+        this.token = access_token
+        localStorage.setItem('token', access_token)
+        localStorage.setItem('refresh_token', refresh_token)
+        
+        this.isVerifying = false
+        this.verificationEmail = null
+      } catch (error) {
+        throw new Error('Неверный код подтверждения')
+      }
+    },
+
+    async resetPasswordRequest(email: string): Promise<void> {
+      try {
+        const data: PasswordResetRequest = { email }
+        await apiClient.post('/reset-password/request', data)
+        this.isVerifying = true
+        this.verificationEmail = email
+      } catch (error) {
+        throw new Error('Ошибка при запросе сброса пароля')
+      }
+    },
+
+    async resetPasswordConfirm(code: string, newPassword: string): Promise<void> {
+      if (!this.verificationEmail) {
+        throw new Error('Email не найден')
+      }
+
+      try {
+        const data: PasswordResetConfirm = {
+          email: this.verificationEmail,
+          code,
+          new_password: newPassword
+        }
+        await apiClient.post('/reset-password/confirm', data)
+        
+        this.isVerifying = false
+        this.verificationEmail = null
+      } catch (error) {
+        throw new Error('Ошибка при сбросе пароля')
+      }
+    },
+
+    async refreshToken(): Promise<void> {
+      const refreshToken = localStorage.getItem('refresh_token')
+      if (!refreshToken) {
+        throw new Error('Refresh token не найден')
+      }
+
+      try {
+        const data: RefreshInput = { refresh_token: refreshToken }
+        const response = await apiClient.post<TokenPair>('/refresh', data)
+
+        const { access_token, refresh_token } = response.data
+        this.token = access_token
+        localStorage.setItem('token', access_token)
+        localStorage.setItem('refresh_token', refresh_token)
+      } catch (error) {
+        this.logout()
+        throw new Error('Ошибка при обновлении токена')
+      }
+    },
+
+    async logout(): Promise<void> {
       this.token = null
       this.user = null
+      this.isVerifying = false
+      this.verificationEmail = null
       localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      localStorage.removeItem('refresh_token')
     },
 
-    // Восстановление сессии при перезагрузке страницы
-    initAuth() {
+    initAuth(): void {
       const token = localStorage.getItem('token')
-      const userStr = localStorage.getItem('user')
-      
-      if (token && userStr) {
+      if (token) {
         this.token = token
-        this.user = JSON.parse(userStr)
       }
-    },
-
-    // Функции подписки/отписки
-    follow(userId: number) {
-      if (!this.user) return
-      if (!this.user.following) {
-        this.user.following = []
-      }
-      this.user.following.push(userId)
-    },
-
-    unfollow(userId: number) {
-      if (!this.user || !this.user.following) return
-      this.user.following = this.user.following.filter(id => id !== userId)
     }
   }
 })

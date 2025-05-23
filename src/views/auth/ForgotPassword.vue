@@ -1,33 +1,116 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import AuthLogo from '@/components/auth/AuthLogo.vue'
+import VerificationCode from '@/components/auth/VerificationCode.vue'
+import { useAuthStore } from '@/stores/auth'
 
-const email = ref('')
+const router = useRouter()
+const authStore = useAuthStore()
+
+interface ResetPasswordForm {
+  email: string
+  newPassword: string
+  confirmPassword: string
+}
+
+const form = ref<ResetPasswordForm>({
+  email: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
 const isLoading = ref(false)
 const error = ref('')
-const success = ref(false)
+const showNewPasswordForm = ref(false)
+
+const isVerifying = computed(() => authStore.isVerifying)
+const verificationEmail = computed(() => authStore.verificationEmail)
 
 const handleSubmit = async () => {
   try {
     isLoading.value = true
     error.value = ''
     
-    // Имитация задержки запроса
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Здесь будет логика восстановления пароля
-    success.value = true
+    await authStore.resetPasswordRequest(form.value.email)
   } catch (e) {
-    error.value = 'Ошибка при отправке письма для восстановления пароля'
+    error.value = 'Ошибка при отправке запроса на сброс пароля'
   } finally {
     isLoading.value = false
   }
+}
+
+const handleVerifyCode = async (code: string) => {
+  try {
+    if (form.value.newPassword !== form.value.confirmPassword) {
+      error.value = 'Пароли не совпадают'
+      return
+    }
+
+    if (form.value.newPassword.length < 8) {
+      error.value = 'Пароль должен содержать минимум 8 символов'
+      return
+    }
+
+    isLoading.value = true
+    error.value = ''
+    
+    await authStore.resetPasswordConfirm(code, form.value.newPassword)
+    router.push('/auth/login')
+  } catch (e) {
+    error.value = 'Неверный код подтверждения'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleCancelVerification = () => {
+  authStore.$patch({
+    isVerifying: false,
+    verificationEmail: null
+  })
 }
 </script>
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg">
+    <VerificationCode
+      v-if="isVerifying"
+      :email="verificationEmail!"
+      :is-loading="isLoading"
+      :error="error"
+      @submit="handleVerifyCode"
+      @cancel="handleCancelVerification"
+    >
+      <div class="mt-4 space-y-4">
+        <div>
+          <label for="new-password" class="sr-only">Новый пароль</label>
+          <input
+            id="new-password"
+            v-model="form.newPassword"
+            name="new-password"
+            type="password"
+            required
+            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+            placeholder="Новый пароль"
+          >
+        </div>
+        <div>
+          <label for="confirm-password" class="sr-only">Подтвердите пароль</label>
+          <input
+            id="confirm-password"
+            v-model="form.confirmPassword"
+            name="confirm-password"
+            type="password"
+            required
+            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+            placeholder="Подтвердите пароль"
+          >
+        </div>
+      </div>
+    </VerificationCode>
+    
+    <div v-else class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg">
       <div>
         <AuthLogo />
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -38,12 +121,12 @@ const handleSubmit = async () => {
         </p>
       </div>
 
-      <form v-if="!success" class="mt-8 space-y-6" @submit.prevent="handleSubmit">
+      <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
         <div>
           <label for="email-address" class="sr-only">Email</label>
           <input
             id="email-address"
-            v-model="email"
+            v-model="form.email"
             name="email"
             type="email"
             required
@@ -100,39 +183,16 @@ const handleSubmit = async () => {
         </div>
       </form>
 
-      <div 
-        v-else
-        class="mt-8 text-center"
-      >
-        <div class="rounded-full bg-green-100 p-3 mx-auto w-16 h-16 flex items-center justify-center">
-          <svg 
-            class="w-8 h-8 text-green-500" 
-            xmlns="http://www.w3.org/2000/svg" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path 
-              stroke-linecap="round" 
-              stroke-linejoin="round" 
-              stroke-width="2" 
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        </div>
-        <h3 class="mt-4 text-lg font-medium text-gray-900">Проверьте почту</h3>
-        <p class="mt-2 text-sm text-gray-600">
-          Мы отправили инструкции по восстановлению пароля на ваш email
-        </p>
-      </div>
-
       <div class="text-center mt-4">
-        <router-link 
-          to="/auth/login" 
-          class="font-medium text-primary hover:text-primary-dark"
-        >
-          Вернуться к входу
-        </router-link>
+        <p class="text-sm text-gray-600">
+          Вспомнили пароль?
+          <router-link 
+            to="/auth/login" 
+            class="font-medium text-primary hover:text-primary-dark"
+          >
+            Войти
+          </router-link>
+        </p>
       </div>
 
       <div 

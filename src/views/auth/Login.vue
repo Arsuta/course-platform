@@ -1,41 +1,63 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import AuthLogo from '@/components/auth/AuthLogo.vue'
+import VerificationCode from '@/components/auth/VerificationCode.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRoute } from 'vue-router'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const route = useRoute()
 
-const form = ref({
+interface LoginForm {
+  email: string
+  password: string
+}
+
+const form = ref<LoginForm>({
   email: '',
-  password: '',
-  rememberMe: false
+  password: ''
 })
 
 const isLoading = ref(false)
 const error = ref('')
 
+const isVerifying = computed(() => authStore.isVerifying)
+const verificationEmail = computed(() => authStore.verificationEmail)
+
 const handleSubmit = async () => {
   try {
     isLoading.value = true
     error.value = ''
-    
-    // Имитация задержки запроса
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
     await authStore.login(form.value.email, form.value.password)
-    
-    // Проверяем, есть ли сохраненный путь для редиректа
-    const redirectPath = route.query.redirect as string
-    router.push(redirectPath || '/')
   } catch (e) {
     error.value = 'Неверный email или пароль'
   } finally {
     isLoading.value = false
   }
+}
+
+const handleVerifyCode = async (code: string) => {
+  try {
+    isLoading.value = true
+    error.value = ''
+    await authStore.verifyLogin(code)
+    
+    // Проверяем, есть ли сохраненный путь для редиректа
+    const redirectPath = route.query.redirect as string
+    router.push(redirectPath || '/')
+  } catch (e) {
+    error.value = 'Неверный код подтверждения'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleCancelVerification = () => {
+  authStore.$patch({
+    isVerifying: false,
+    verificationEmail: null
+  })
 }
 
 const handleGoogleLogin = () => {
@@ -46,7 +68,16 @@ const handleGoogleLogin = () => {
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg">
+    <VerificationCode
+      v-if="isVerifying"
+      :email="verificationEmail!"
+      :is-loading="isLoading"
+      :error="error"
+      @submit="handleVerifyCode"
+      @cancel="handleCancelVerification"
+    />
+    
+    <div v-else class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg">
       <div>
         <AuthLogo />
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -86,19 +117,6 @@ const handleGoogleLogin = () => {
         </div>
 
         <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <input
-              id="remember-me"
-              v-model="form.rememberMe"
-              name="remember-me"
-              type="checkbox"
-              class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-            >
-            <label for="remember-me" class="ml-2 block text-sm text-gray-900">
-              Запомнить на 30 дней
-            </label>
-          </div>
-
           <div class="text-sm">
             <router-link 
               to="/auth/forgot-password"

@@ -19,7 +19,11 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["vite/client"]
+    "types": [
+      "vite/client",
+      "node",
+      "axios"
+    ]
   },
   "include": [
     "src/**/*.ts",
