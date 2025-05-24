@@ -1,108 +1,123 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
-import type { Course } from '@/types/course'
-import CourseCard from './CourseCard.vue'
+import { ref, onMounted } from 'vue'
+import type { Course } from '@/api/types'
 
 const props = defineProps<{
   courses: Course[]
   formatPrice: (price: number) => string
 }>()
 
-defineEmits<{
-  enroll: [id: number]
+const emit = defineEmits<{
+  (e: 'enroll', courseId: number): void
 }>()
 
 const currentSlide = ref(0)
-const autoplayInterval = ref<number | null>(null)
-const AUTOPLAY_DELAY = 8000
+const slidesPerView = ref(3)
 
-const nextSlide = () => {
-  currentSlide.value = (currentSlide.value + 1) % props.courses.length
-}
-
-const prevSlide = () => {
-  currentSlide.value = currentSlide.value === 0 
-    ? props.courses.length - 1 
-    : currentSlide.value - 1
-}
-
-const startAutoplay = () => {
-  autoplayInterval.value = setInterval(nextSlide, AUTOPLAY_DELAY) as unknown as number
-}
-
-const stopAutoplay = () => {
-  if (autoplayInterval.value) {
-    clearInterval(autoplayInterval.value)
+const updateSlidesPerView = () => {
+  if (window.innerWidth < 640) {
+    slidesPerView.value = 1
+  } else if (window.innerWidth < 1024) {
+    slidesPerView.value = 2
+  } else {
+    slidesPerView.value = 3
   }
 }
 
-onMounted(startAutoplay)
-onUnmounted(stopAutoplay)
+onMounted(() => {
+  updateSlidesPerView()
+  window.addEventListener('resize', updateSlidesPerView)
+})
+
+const nextSlide = () => {
+  if (currentSlide.value < props.courses.length - slidesPerView.value) {
+    currentSlide.value++
+  }
+}
+
+const prevSlide = () => {
+  if (currentSlide.value > 0) {
+    currentSlide.value--
+  }
+}
 </script>
 
 <template>
-  <div v-if="courses.length > 0" class="relative">
-    <div class="overflow-hidden rounded-xl">
-      <div class="absolute top-0 left-0 right-0 h-3 bg-white/30 z-10">
-        <div 
-          class="h-full bg-white/90 transition-all duration-1000 ease-in-out"
-          :style="{ 
-            width: `${(currentSlide) * (100 / courses.length)}%`
-          }"
-        />
-      </div>
+  <div class="relative">
+    <!-- Кнопки навигации -->
+    <button
+      v-show="currentSlide > 0"
+      @click="prevSlide"
+      class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-10 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow"
+    >
+      <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+    
+    <button
+      v-show="currentSlide < courses.length - slidesPerView"
+      @click="nextSlide"
+      class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 z-10 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow"
+    >
+      <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
 
-      <div 
-        class="flex transition-transform duration-1000 ease-in-out"
-        :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
+    <!-- Слайдер -->
+    <div class="overflow-hidden">
+      <div
+        class="flex transition-transform duration-300 ease-in-out"
+        :style="{ transform: `translateX(-${currentSlide * (100 / slidesPerView)}%)` }"
       >
-        <div 
-          v-for="course in courses" 
+        <div
+          v-for="course in courses"
           :key="course.id"
-          class="w-full flex-shrink-0 p-4 relative"
+          :style="{ width: `${100 / slidesPerView}%` }"
+          class="px-3"
         >
-          <div class="absolute inset-0 bg-cover bg-center" :style="{ backgroundImage: `url(${course.image})` }"></div>
-          <div class="relative z-10 bg-white bg-opacity-90 rounded-lg shadow-lg p-6 flex flex-col transition-transform duration-300 hover:scale-105">
-            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ course.title }}</h3>
-            <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ course.description }}</p>
-            <div class="flex items-center justify-between mt-auto">
-              <span class="text-lg font-bold text-gray-900">
-                {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
-              </span>
-              <button 
-                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-                @click="$emit('enroll', course.id)"
-              >
-                {{ course.isEnrolled ? 'Продолжить' : 'Записаться' }}
-              </button>
+          <div class="bg-white rounded-xl shadow-lg overflow-hidden h-full">
+            <img
+              :src="course.thumbnail"
+              :alt="course.title"
+              class="w-full h-48 object-cover"
+            />
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-primary-dark px-3 py-1 bg-primary/10 rounded-full">
+                  {{ course.category }}
+                </span>
+                <span class="text-sm text-gray-500">
+                  {{ course.duration }} часов
+                </span>
+              </div>
+              
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ course.title }}</h3>
+              <p class="text-gray-600 mb-4 line-clamp-2">{{ course.description }}</p>
+              
+              <div class="flex items-center justify-between mt-auto">
+                <div class="flex items-center space-x-2">
+                  <span class="text-lg font-bold text-primary">
+                    {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
+                  </span>
+                  <span v-if="course.rating" class="text-sm text-gray-500">
+                    {{ course.rating.toFixed(1) }} ★
+                  </span>
+                </div>
+                
+                <button
+                  @click="emit('enroll', Number(course.id))"
+                  class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                >
+                  Записаться
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Навигационные кнопки -->
-    <button 
-      @click="prevSlide"
-      @mouseenter="stopAutoplay"
-      @mouseleave="startAutoplay"
-      class="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 backdrop-blur-sm transition-colors z-10"
-    >
-      <ChevronLeftIcon class="w-6 h-6 text-white" />
-    </button>
-
-    <button 
-      @click="nextSlide"
-      @mouseenter="stopAutoplay"
-      @mouseleave="startAutoplay"
-      class="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 backdrop-blur-sm transition-colors z-10"
-    >
-      <ChevronRightIcon class="w-6 h-6 text-white" />
-    </button>
-  </div>
-  <div v-else class="flex justify-center items-center h-32 sm:h-48 lg:h-72">
-    <p class="text-gray-500">Загрузка курсов...</p>
   </div>
 </template>
 

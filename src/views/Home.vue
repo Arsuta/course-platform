@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCourseStore } from '@/stores/courses'
 import CourseSlider from '@/components/course/CourseSlider.vue'
 import HomeHeader from '@/components/home/HomeHeader.vue'
 import CourseCategories from '@/components/course/CourseCategories.vue'
-import { CourseModel } from '@/models/course'
-import type { Course } from '@/types/course'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const popularCourses = ref<Course[]>([])
+const courseStore = useCourseStore()
 const selectedCategory = ref('')
 
 onMounted(async () => {
-  popularCourses.value = await CourseModel.getPopularCourses()
+  await courseStore.fetchPopularCourses()
 })
 
 const formatPrice = (price: number): string => {
@@ -31,13 +30,12 @@ const handleEnroll = async (courseId: number) => {
     return
   }
 
-  try {
-    await CourseModel.enrollCourse(courseId)
+  const success = await courseStore.enrollCourse(courseId.toString())
+  if (success) {
     // TODO: Показать уведомление об успешной записи
-  } catch (error) {
-    console.error('Failed to enroll:', error)
-    // TODO: Показать уведомление об ошибке
+    router.push(`/courses/${courseId}`)
   }
+  // В случае ошибки уведомление покажется автоматически через error в store
 }
 
 const features = [
@@ -74,8 +72,15 @@ const stats = [
     <section class="bg-gray-50">
       <div class="container mx-auto px-4 py-12">
         <h2 class="text-3xl font-bold text-gray-900 mb-8">Популярные курсы</h2>
+        <div v-if="courseStore.loading" class="text-center py-8">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        </div>
+        <div v-else-if="courseStore.error" class="text-center py-8 text-red-600">
+          {{ courseStore.error }}
+        </div>
         <CourseSlider 
-          :courses="popularCourses" 
+          v-else
+          :courses="courseStore.popularCourses" 
           :formatPrice="formatPrice"
           @enroll="handleEnroll"
         />
