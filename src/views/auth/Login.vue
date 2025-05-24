@@ -64,6 +64,10 @@ const handleGoogleLogin = () => {
   // Здесь будет логика входа через Google
   console.log('Google login')
 }
+
+const handleGuestAccess = () => {
+  router.push('/')
+}
 </script>
 
 <template>
@@ -127,7 +131,7 @@ const handleGoogleLogin = () => {
           </div>
         </div>
 
-        <div>
+        <div class="space-y-3">
           <button
             type="submit"
             :disabled="isLoading"
@@ -171,6 +175,36 @@ const handleGoogleLogin = () => {
               </svg>
             </span>
             {{ isLoading ? 'Вход...' : 'Войти' }}
+          </button>
+
+          <button
+            type="button"
+            @click="handleGuestAccess"
+            class="relative w-full flex justify-center py-2 px-4 border-2 border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <svg 
+                class="h-5 w-5 text-gray-500" 
+                xmlns="http://www.w3.org/2000/svg" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round" 
+                  stroke-width="2" 
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round" 
+                  stroke-width="2" 
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+            </span>
+            Зайти и осмотреться
           </button>
         </div>
 

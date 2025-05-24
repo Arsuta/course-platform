@@ -1,25 +1,61 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { 
   HomeIcon, 
   AcademicCapIcon, 
   InformationCircleIcon,
-  Bars3Icon 
+  Bars3Icon,
+  UserIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/vue/24/outline'
 import { RouterLink } from 'vue-router'
 
-const navItems = [
-  { title: 'Главная', path: '/', icon: HomeIcon },
-  { title: 'Курсы', path: '/courses', icon: AcademicCapIcon },
-  { title: 'О нас', path: '/about', icon: InformationCircleIcon },
-]
+const router = useRouter()
+const authStore = useAuthStore()
 
-defineProps<{
+const props = defineProps<{
   isCollapsed: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   toggle: []
 }>()
+
+// Навигационные элементы в зависимости от статуса авторизации
+const navItems = computed(() => {
+  const baseItems = [
+    { title: 'Главная', path: '/', icon: HomeIcon },
+    { title: 'О нас', path: '/about', icon: InformationCircleIcon },
+  ]
+
+  if (authStore.isAuthenticated) {
+    return [
+      ...baseItems,
+      { title: 'Курсы', path: '/courses', icon: AcademicCapIcon },
+      { 
+        title: 'Профиль', 
+        path: `/profile/${authStore.currentUser?.id}`, 
+        icon: UserIcon 
+      }
+    ]
+  } else {
+    return [
+      ...baseItems,
+      { title: 'Каталог курсов', path: '/courses/preview', icon: AcademicCapIcon }
+    ]
+  }
+})
+
+const handleAuthAction = () => {
+  if (authStore.isAuthenticated) {
+    authStore.logout()
+    router.push('/')
+  } else {
+    router.push('/auth/login')
+  }
+}
 </script>
 
 <template>
@@ -58,6 +94,30 @@ defineEmits<{
           {{ item.title }}
         </span>
       </RouterLink>
+
+      <!-- Кнопка входа/выхода -->
+      <button
+        @click.stop="handleAuthAction"
+        class="w-full flex items-center py-2 text-gray-800 hover:bg-primary-light hover:text-white rounded-md transition-colors duration-500"
+        :class="{ 
+          'justify-center': isCollapsed,
+          'px-3': !isCollapsed
+        }"
+      >
+        <ArrowRightOnRectangleIcon 
+          class="h-5 w-5 flex-shrink-0"
+          :class="{ 
+            'ml-2': isCollapsed,
+            'transform rotate-180': authStore.isAuthenticated 
+          }"
+        />
+        <span 
+          class="ml-3 transition-all duration-500 ease-in-out overflow-hidden whitespace-nowrap"
+          :style="{ maxWidth: isCollapsed ? '0' : '200px', opacity: isCollapsed ? 0 : 1 }"
+        >
+          {{ authStore.isAuthenticated ? 'Выйти' : 'Войти' }}
+        </span>
+      </button>
     </div>
   </nav>
 </template>
