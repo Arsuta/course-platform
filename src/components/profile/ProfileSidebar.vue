@@ -1,64 +1,93 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types/user'
+import type { APIResponse } from '@/api/base'
 
 const route = useRoute()
 const authStore = useAuthStore()
 
-// Получаем данные пользователя профиля
-const profileUser = computed(() => {
-  const profileId = Number(route.params.id)
-  return authStore.getUserById(profileId)
+const profileUser = ref<User | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+const fetchUser = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const userId = route.params.id as string
+    const response = await authStore.getUserById(userId)
+    profileUser.value = (response as any).data || response as User
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке пользователя'
+    profileUser.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchUser()
 })
 
 // Проверяем, является ли текущий пользователь владельцем профиля
 const isOwner = computed(() => {
-  return authStore.currentUser?.id === Number(route.params.id)
+  return authStore.currentUser?.id === route.params.id
 })
 
 // Проверяем, подписан ли текущий пользователь на профиль
 const isSubscribed = computed(() => {
-  if (!authStore.currentUser || isOwner.value) return false
-  return authStore.currentUser.following?.includes(Number(route.params.id)) || false
+  const currentUser = authStore.currentUser as User | null
+  if (!currentUser || isOwner.value) return false
+  return currentUser.following?.includes(route.params.id as string) || false
 })
 
 // Вычисляем прогресс XP до следующего уровня
 const xpProgress = computed(() => {
   if (!profileUser.value) return 0
-  const xpForNextLevel = profileUser.value.level * 1000
-  return (profileUser.value.xp % xpForNextLevel) / xpForNextLevel * 100
+  const xpForNextLevel = (profileUser.value.level || 0) * 1000
+  return ((profileUser.value.xp || 0) % xpForNextLevel) / xpForNextLevel * 100
 })
 
 // Обработчик подписки/отписки
 const handleSubscribe = () => {
   if (!authStore.currentUser) return
+  const userId = route.params.id as string
   if (isSubscribed.value) {
-    authStore.unfollow(Number(route.params.id))
+    authStore.unfollow(userId)
   } else {
-    authStore.follow(Number(route.params.id))
+    authStore.follow(userId)
   }
 }
 </script>
 
 <template>
-  <div v-if="profileUser" class="p-6 space-y-6">
+  <div v-if="loading" class="flex justify-center p-6">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+
+  <div v-else-if="error" class="p-6 text-red-500 text-center">
+    {{ error }}
+  </div>
+
+  <div v-else-if="profileUser" class="p-6 space-y-6">
     <!-- Аватар и имя -->
     <div class="text-center">
       <div class="relative inline-block">
         <img 
           :src="profileUser.avatar" 
-          :alt="profileUser.name"
+          :alt="profileUser.name || ''"
           class="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg"
         />
         <div 
           class="absolute -bottom-2 -right-2 bg-primary text-white rounded-full px-3 py-1 text-sm font-medium shadow-md"
         >
-          Lvl {{ profileUser.level }}
+          Lvl {{ profileUser.level || 0 }}
         </div>
       </div>
       <h2 class="mt-4 text-2xl font-bold text-gray-800">
-        {{ profileUser.name }}
+        {{ profileUser.name || `${profileUser.first_name} ${profileUser.last_name}` }}
       </h2>
       <p class="text-gray-500">{{ profileUser.email }}</p>
     </div>

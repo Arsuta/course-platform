@@ -1,24 +1,20 @@
-import { BaseAPI } from './base';
+import { BaseAPI, APIResponse } from './base';
 import type { UserProfile, Course } from './types';
 
 export class ProfileAPI extends BaseAPI {
-  async getProfile(): Promise<UserProfile> {
-    const { data } = await this.api.get('/profile');
-    return data;
+  async getProfile(): Promise<APIResponse<UserProfile>> {
+    return this.get('/profile');
   }
 
-  async updateProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
-    const { data } = await this.api.put('/profile', profile);
-    return data;
+  async updateProfile(profile: Partial<UserProfile>): Promise<APIResponse<UserProfile>> {
+    return this.put('/profile', profile);
   }
 
-  async getPurchasedCourses(): Promise<Course[]> {
-    const { data } = await this.api.get('/profile/courses');
-    return data;
+  async getPurchasedCourses(): Promise<APIResponse<Course[]>> {
+    return this.get('/profile/courses');
   }
 
-  async getTotalXP(): Promise<number> {
-    const { data } = await this.api.get('/profile/xp');
-    return data.total_xp;
+  async getTotalXP(): Promise<APIResponse<{ total_xp: number }>> {
+    return this.get('/profile/xp');
   }
 } 

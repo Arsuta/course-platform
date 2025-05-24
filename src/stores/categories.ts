@@ -9,13 +9,14 @@ export const useCategoryStore = defineStore('categories', () => {
   const error = ref<string | null>(null)
 
   const fetchCategories = async () => {
-    loading.value = true
-    error.value = null
     try {
-      categories.value = await api.categories.getAllCategories()
-    } catch (err) {
-      error.value = 'Не удалось загрузить категории'
-      console.error('Failed to fetch categories:', err)
+      loading.value = true
+      error.value = null
+      const response = await api.categories.getAllCategories()
+      categories.value = response.data
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке категорий'
+      console.error('Failed to fetch categories:', e)
     } finally {
       loading.value = false
     }

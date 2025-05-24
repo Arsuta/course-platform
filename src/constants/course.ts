@@ -24,4 +24,7 @@ export const COURSE_CONSTANTS = {
     marketing: 'Маркетинг',
     business: 'Бизнес'
   }
-} 
+} as const
+
+export type CourseCategory = keyof typeof COURSE_CONSTANTS.CATEGORY_LABELS
+export type CourseLevel = keyof typeof COURSE_CONSTANTS.LEVEL_LABELS 

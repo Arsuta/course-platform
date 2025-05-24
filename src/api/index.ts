@@ -1,14 +1,33 @@
-import { CoursesAPI } from './courses';
-import { CategoriesAPI } from './categories';
-import { ProfileAPI } from './profile';
+import { CourseService } from './services/courses'
+import { CategoryService } from './services/categories'
+import { ProfileService } from './services/profile'
+import { AuthService } from './services/auth'
 
-export * from './types';
+class API {
+  courses = new CourseService()
+  categories = new CategoryService()
+  profile = new ProfileService()
+  auth = new AuthService()
 
-export const api = {
-  courses: new CoursesAPI(),
-  categories: new CategoriesAPI(),
-  profile: new ProfileAPI(),
-};
+  setToken(token: string) {
+    this.courses.setToken(token)
+    this.categories.setToken(token)
+    this.profile.setToken(token)
+    this.auth.setToken(token)
+  }
+
+  clearToken() {
+    this.courses.clearToken()
+    this.categories.clearToken()
+    this.profile.clearToken()
+    this.auth.clearToken()
+  }
+}
+
+export const api = new API()
+
+// Экспортируем типы
+export * from './types'
 
 // Функция для установки токена авторизации для всех сервисов
 export const setAuthToken = (token: string) => {

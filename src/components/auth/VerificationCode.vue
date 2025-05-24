@@ -6,7 +6,7 @@ interface Props {
   onSubmit: (code: string) => void
   onCancel: () => void
   isLoading?: boolean
-  error?: string
+  error: string | null | undefined
 }
 
 const props = defineProps<Props>()

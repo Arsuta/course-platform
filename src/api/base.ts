@@ -1,31 +1,86 @@
-import axios, { AxiosInstance } from 'axios';
+import { apiClient } from './client'
+import type { AxiosRequestConfig } from 'axios'
+
+export interface APIResponse<T> {
+  data: T
+  status: number
+  message?: string
+}
+
+export interface APIError {
+  message: string
+  status: number
+  code?: string
+}
 
 export class BaseAPI {
-  protected api: AxiosInstance;
-  protected token: string | null = null;
-
-  constructor() {
-    this.api = axios.create({
-      baseURL: '', // Оставляем пустым, как requested
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Добавляем интерцептор для авторизации
-    this.api.interceptors.request.use((config) => {
-      if (this.token) {
-        config.headers.Authorization = `Bearer ${this.token}`;
-      }
-      return config;
-    });
-  }
+  protected token: string | null = null
 
   setToken(token: string) {
-    this.token = token;
+    this.token = token
   }
 
   clearToken() {
-    this.token = null;
+    this.token = null
+  }
+
+  protected async get<T>(url: string, config?: AxiosRequestConfig): Promise<APIResponse<T>> {
+    const response = await apiClient.get<T>(url, {
+      ...config,
+      headers: {
+        ...config?.headers,
+        Authorization: this.token ? `Bearer ${this.token}` : undefined
+      }
+    })
+    return {
+      data: response.data,
+      status: response.status,
+      message: response.statusText
+    }
+  }
+
+  protected async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<APIResponse<T>> {
+    const response = await apiClient.post<T>(url, data, {
+      ...config,
+      headers: {
+        ...config?.headers,
+        Authorization: this.token ? `Bearer ${this.token}` : undefined
+      }
+    })
+    return {
+      data: response.data,
+      status: response.status,
+      message: response.statusText
+    }
+  }
+
+  protected async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<APIResponse<T>> {
+    const response = await apiClient.put<T>(url, data, {
+      ...config,
+      headers: {
+        ...config?.headers,
+        Authorization: this.token ? `Bearer ${this.token}` : undefined
+      }
+    })
+    return {
+      data: response.data,
+      status: response.status,
+      message: response.statusText
+    }
+  }
+
+  protected async delete<T>(url: string, config?: AxiosRequestConfig): Promise<APIResponse<T>> {
+    const response = await apiClient.delete<T>(url, {
+      ...config,
+      headers: {
+        ...config?.headers,
+        Authorization: this.token ? `Bearer ${this.token}` : undefined
+      }
+    })
+    return {
+      data: response.data,
+      status: response.status,
+      message: response.statusText
+    }
   }
 } 

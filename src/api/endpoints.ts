@@ -1,120 +1,56 @@
-import type { AxiosResponse } from 'axios'
-import apiClient from './client'
-import type {
-  Course,
-  Lesson,
-  UserProfile,
-  CourseProgress,
-  PaginationQuery,
-  PaginatedResponse
-} from '@/types/api'
-
-// Courses API
-export const coursesApi = {
-  // Получить список всех курсов
-  getAll: (params?: PaginationQuery): Promise<AxiosResponse<Course[]>> => {
-    return apiClient.get('/courses', { params })
-  },
-
-  // Получить курс по ID
-  getById: (id: string): Promise<AxiosResponse<Course>> => {
-    return apiClient.get(`/courses/${id}`)
-  },
-
-  // Получить курсы по категории
-  getByCategory: (categoryId: string, params?: PaginationQuery): Promise<AxiosResponse<Course[]>> => {
-    return apiClient.get(`/courses/category/${categoryId}`, { params })
-  },
-
-  // Создать новый курс
-  create: (course: Partial<Course>): Promise<AxiosResponse<Course>> => {
-    return apiClient.post('/courses', course)
-  },
-
-  // Обновить курс
-  update: (id: string, course: Partial<Course>): Promise<AxiosResponse<Course>> => {
-    return apiClient.put(`/courses/${id}`, course)
-  },
-
-  // Удалить курс
-  delete: (id: string): Promise<AxiosResponse<void>> => {
-    return apiClient.delete(`/courses/${id}`)
-  },
-
-  // Купить курс
-  purchase: (courseId: string): Promise<AxiosResponse<any>> => {
-    return apiClient.post('/student/courses/purchase', { course_id: courseId })
-  }
+// Auth endpoints
+export const AUTH = {
+  LOGIN: '/auth/login',
+  REGISTER: '/auth/register',
+  LOGOUT: '/auth/logout',
+  REFRESH: '/auth/refresh',
+  ME: '/auth/me',
+  VERIFY: '/auth/verify',
+  RESET_PASSWORD: '/auth/reset-password',
+  RESET_PASSWORD_CONFIRM: '/auth/reset-password-confirm'
 }
 
-// Lessons API
-export const lessonsApi = {
-  // Получить список уроков курса
-  getByCourse: (courseId: string): Promise<AxiosResponse<Lesson[]>> => {
-    return apiClient.get(`/student/courses/${courseId}/lessons`)
-  },
-
-  // Получить урок по ID
-  getById: (lessonId: string): Promise<AxiosResponse<Lesson>> => {
-    return apiClient.get(`/student/lessons/${lessonId}`)
-  },
-
-  // Отметить урок как просмотренный
-  markAsViewed: (lessonId: string): Promise<AxiosResponse<any>> => {
-    return apiClient.post(`/progress/lessons/${lessonId}/view`)
-  },
-
-  // Отправить ответы на тест
-  submitTest: (lessonId: string, answers: Record<string, number>): Promise<AxiosResponse<any>> => {
-    return apiClient.post(`/progress/lessons/${lessonId}/test`, answers)
-  }
+// Course endpoints
+export const COURSES = {
+  LIST: '/courses',
+  DETAIL: (id: string) => `/courses/${id}`,
+  PURCHASE: '/courses/purchase',
+  CATEGORY: (id: string) => `/courses/category/${id}`,
+  STRUCTURE: (courseId: string) => `/student/courses/${courseId}/structure`,
+  LESSONS: (id: string) => `/courses/${id}/lessons`
 }
 
-// Profile API
-export const profileApi = {
-  // Получить профиль пользователя
-  get: (): Promise<AxiosResponse<UserProfile>> => {
-    return apiClient.get('/profile')
-  },
-
-  // Обновить профиль
-  update: (profile: Partial<UserProfile>): Promise<AxiosResponse<UserProfile>> => {
-    return apiClient.put('/profile', profile)
-  },
-
-  // Получить купленные курсы
-  getPurchasedCourses: (): Promise<AxiosResponse<Course[]>> => {
-    return apiClient.get('/profile/courses')
-  },
-
-  // Получить общий XP
-  getTotalXp: (): Promise<AxiosResponse<{ total_xp: number }>> => {
-    return apiClient.get('/profile/xp')
-  }
+// Category endpoints
+export const CATEGORIES = {
+  LIST: '/categories',
+  DETAIL: (id: string) => `/categories/${id}`
 }
 
-// Progress API
-export const progressApi = {
-  // Получить прогресс по курсу
-  getCourseProgress: (courseId: string): Promise<AxiosResponse<CourseProgress>> => {
-    return apiClient.get(`/progress/courses/${courseId}`)
-  }
+// Profile endpoints
+export const PROFILE = {
+  ME: '/profile/me',
+  UPDATE: '/profile/update',
+  USER: (id: string) => `/users/${id}`,
+  FOLLOW: (id: string) => `/users/${id}/follow`,
+  UNFOLLOW: (id: string) => `/users/${id}/unfollow`,
+  ADD_XP: '/profile/xp/add',
+  GET: '/profile',
+  COURSES: '/profile/courses',
+  XP: '/profile/xp'
 }
 
-// Admin API
-export const adminApi = {
-  // Получить список курсов на модерации
-  getPendingCourses: (params?: PaginationQuery): Promise<AxiosResponse<Course[]>> => {
-    return apiClient.get('/admin/courses/pending', { params })
-  },
+// Progress endpoints
+export const PROGRESS = {
+  COURSE: (courseId: string) => `/progress/courses/${courseId}`,
+  LESSON_TEST: (lessonId: string) => `/progress/lessons/${lessonId}/test`
+}
 
-  // Одобрить курс
-  approveCourse: (courseId: string): Promise<AxiosResponse<any>> => {
-    return apiClient.post(`/admin/courses/${courseId}/approve`)
-  },
-
-  // Отклонить курс
-  rejectCourse: (courseId: string, reason: string): Promise<AxiosResponse<any>> => {
-    return apiClient.post(`/admin/courses/${courseId}/reject`, { reason })
+// Admin endpoints
+export const ADMIN = {
+  PENDING_COURSES: '/admin/courses/pending',
+  COURSE: {
+    CREATE: '/admin/courses',
+    UPDATE: (id: string) => `/admin/courses/${id}`,
+    DELETE: (id: string) => `/admin/courses/${id}`
   }
 } 

@@ -1,30 +1,50 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types/user'
+import type { APIResponse } from '@/api/base'
 
 const route = useRoute()
 const authStore = useAuthStore()
 
-const user = computed(() => {
-  const profileId = Number(route.params.id)
-  return authStore.getUserById(profileId)
+const user = ref<User | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+const fetchUser = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const userId = route.params.id as string
+    const response = await authStore.getUserById(userId)
+    user.value = (response as any).data || response as User
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке пользователя'
+    user.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchUser()
 })
 
 const xpProgress = computed(() => {
   if (!user.value) return 0
-  const xpForNextLevel = user.value.level * 1000
-  return (user.value.xp % xpForNextLevel) / xpForNextLevel * 100
+  const xpForNextLevel = (user.value.level || 0) * 1000
+  return ((user.value.xp || 0) % xpForNextLevel) / xpForNextLevel * 100
 })
 
 const totalXpForLevel = computed(() => {
   if (!user.value) return 0
-  return user.value.level * 1000
+  return (user.value.level || 0) * 1000
 })
 
 const currentLevelXp = computed(() => {
   if (!user.value) return 0
-  return user.value.xp % totalXpForLevel.value
+  return (user.value.xp || 0) % totalXpForLevel.value
 })
 
 const levelAchievements = [
@@ -37,12 +57,12 @@ const levelAchievements = [
 
 const nextAchievement = computed(() => {
   if (!user.value) return null
-  return levelAchievements.find(achievement => achievement.level > user.value!.level)
+  return levelAchievements.find(achievement => achievement.level > (user.value?.level || 0))
 })
 
 const earnedAchievements = computed(() => {
   if (!user.value) return []
-  return levelAchievements.filter(achievement => achievement.level <= user.value!.level)
+  return levelAchievements.filter(achievement => achievement.level <= (user.value?.level || 0))
 })
 
 interface Course {
@@ -102,12 +122,20 @@ const filteredCourses = computed(() => {
 </script>
 
 <template>
-  <div v-if="user" class="space-y-8">
+  <div v-if="loading" class="flex justify-center">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+
+  <div v-else-if="error" class="text-red-500 text-center">
+    {{ error }}
+  </div>
+
+  <div v-else-if="user" class="space-y-8">
     <!-- Текущий уровень и XP -->
     <div class="bg-white rounded-xl shadow-sm p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-xl font-semibold text-gray-800">
-          Уровень {{ user.level }}
+          Уровень {{ user.level || 0 }}
         </h3>
         <div class="text-sm text-gray-500">
           {{ Math.floor(currentLevelXp) }} / {{ totalXpForLevel }} XP
@@ -124,7 +152,7 @@ const filteredCourses = computed(() => {
 
       <!-- Информация о следующем уровне -->
       <div class="mt-4 text-sm text-gray-600">
-        До {{ user.level + 1 }} уровня осталось: 
+        До {{ (user.level || 0) + 1 }} уровня осталось: 
         <span class="font-medium">
           {{ Math.ceil(totalXpForLevel - currentLevelXp) }} XP
         </span>

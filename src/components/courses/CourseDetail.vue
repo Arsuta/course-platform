@@ -7,12 +7,12 @@ import type { Module, CourseProgress } from '@/types/course'
 const route = useRoute()
 
 const course = computed(() => {
-  return courses.find(c => c.id === Number(route.params.id))
+  return courses.find(c => c.id === route.params.id)
 })
 
 const progress = computed(() => {
-  const courseId = Number(route.params.id)
-  return (courseProgress as Record<number, CourseProgress>)[courseId]
+  const progressMap = courseProgress as Record<string, CourseProgress>
+  return progressMap[route.params.id as string] || null
 })
 
 const selectedModule = ref<Module | null>(null)
@@ -71,11 +71,12 @@ const enrollInCourse = () => {
 
             <div class="flex items-center space-x-4">
               <img
+                v-if="course.author"
                 :src="course.author.avatar"
                 :alt="course.author.name"
                 class="w-12 h-12 rounded-full object-cover"
               />
-              <div>
+              <div v-if="course.author">
                 <h3 class="text-sm font-medium text-gray-900">
                   {{ course.author.name }}
                 </h3>
@@ -92,14 +93,14 @@ const enrollInCourse = () => {
                 </svg>
                 <span class="text-sm font-medium text-gray-900">{{ course.rating }}</span>
               </div>
-              <span class="text-sm text-gray-500">{{ course.studentsCount }} студентов</span>
-              <span class="text-sm text-gray-500">Последнее обновление {{ new Date(course.updatedAt).toLocaleDateString('ru-RU') }}</span>
+              <span class="text-sm text-gray-500">{{ course.students_count }} студентов</span>
+              <span class="text-sm text-gray-500">Последнее обновление {{ new Date(course.updated_at).toLocaleDateString('ru-RU') }}</span>
             </div>
           </div>
         </div>
 
         <!-- Содержание курса -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div v-if="course.modules?.length" class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-6 space-y-6">
             <h2 class="text-xl font-semibold text-gray-900">Содержание курса</h2>
             
@@ -171,7 +172,7 @@ const enrollInCourse = () => {
         </div>
 
         <!-- Требования к курсу -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div v-if="course.requirements?.length" class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-6 space-y-4">
             <h2 class="text-xl font-semibold text-gray-900">Требования</h2>
             <ul class="list-disc list-inside space-y-2 text-gray-600">
@@ -183,7 +184,7 @@ const enrollInCourse = () => {
         </div>
 
         <!-- Навыки, которые получит студент -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div v-if="course.skills?.length" class="bg-white rounded-xl shadow-sm overflow-hidden">
           <div class="p-6 space-y-4">
             <h2 class="text-xl font-semibold text-gray-900">Чему вы научитесь</h2>
             <ul class="list-disc list-inside space-y-2 text-gray-600">
@@ -249,13 +250,13 @@ const enrollInCourse = () => {
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                   </svg>
-                  <span>{{ course.modules.length }} модулей</span>
+                  <span>{{ course.modules?.length || 0 }} модулей</span>
                 </li>
                 <li class="flex items-center space-x-2 text-gray-600">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span>{{ course.modules.reduce((acc, m) => acc + m.lessons.length, 0) }} уроков</span>
+                  <span>{{ course.modules?.reduce((acc, m) => acc + m.lessons.length, 0) || 0 }} уроков</span>
                 </li>
                 <li class="flex items-center space-x-2 text-gray-600">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

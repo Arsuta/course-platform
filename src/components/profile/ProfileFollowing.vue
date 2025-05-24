@@ -1,117 +1,114 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useProfileStore } from '@/stores/profile'
+import type { User } from '@/types/user'
+import type { APIResponse } from '@/api/base'
 
 const route = useRoute()
-const authStore = useAuthStore()
+const profileStore = useProfileStore()
 
-// Интерфейс пользователя
-interface User {
-  id: number
-  name: string
-  email: string
-  avatar: string
-  level: number
-  xp: number
-  followers: number[]
-  following: number[]
-}
+const loading = ref(false)
+const error = ref<string | null>(null)
+const following = ref<User[]>([])
+const totalFollowing = ref(0)
+const currentPage = ref(1)
+const perPage = ref(10)
 
-// Получаем данные пользователя профиля
-const profileUser = computed(() => {
-  const profileId = Number(route.params.id)
-  return authStore.getUserById(profileId)
-})
-
-// Получаем список подписок
-const following = computed<User[]>(() => {
-  if (!profileUser.value?.following) return []
-  return profileUser.value.following
-    .map(id => authStore.getUserById(id))
-    .filter((user): user is User => user !== null)
-})
-
-// Проверяем, подписан ли текущий пользователь на профиль
-const isSubscribedTo = (userId: number) => {
-  const currentUser = authStore.currentUser
-  if (!currentUser?.following) return false
-  return currentUser.following.includes(userId)
-}
-
-// Обработчик подписки/отписки
-const handleSubscribe = (userId: number) => {
-  if (!authStore.currentUser) return
-  if (isSubscribedTo(userId)) {
-    authStore.unfollow(userId)
-  } else {
-    authStore.follow(userId)
+const fetchFollowing = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const userId = route.params.id as string
+    if (!userId) return
+    
+    const response = await profileStore.getUserById(userId)
+    const user = response.data
+    
+    if (user.following) {
+      following.value = []
+      totalFollowing.value = user.following.length
+      
+      // Получаем информацию о каждом подписчике
+      const followingPromises = user.following.map((id: string) => 
+        profileStore.getUserById(id)
+      )
+      
+      const followingResponses = await Promise.all(followingPromises)
+      following.value = followingResponses.map((response: APIResponse<User>) => response.data)
+    }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке подписок'
+  } finally {
+    loading.value = false
   }
 }
+
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  const start = (page - 1) * perPage.value
+  const end = start + perPage.value
+  following.value = following.value.slice(start, end)
+}
+
+const isFollowing = (userId: string): boolean => {
+  const currentUser = profileStore.user
+  return currentUser?.following?.includes(userId) || false
+}
+
+onMounted(() => {
+  fetchFollowing()
+})
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Заголовок с количеством подписок -->
-    <div class="flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-gray-800">
-        Подписки
-      </h3>
-      <div class="text-sm text-gray-500">
-        Всего: {{ following.length }}
-      </div>
+  <div class="space-y-4">
+    <div v-if="loading" class="flex justify-center">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
 
-    <!-- Список подписок -->
-    <div v-if="following.length" class="grid gap-4 sm:grid-cols-2">
-      <div 
-        v-for="user in following" 
-        :key="user.id"
-        class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-      >
-        <div class="p-4 flex items-center space-x-4">
-          <!-- Аватар и информация -->
-          <div 
-            class="flex items-center space-x-4 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-            @click="$router.push(`/profile/${user.id}`)"
-          >
-            <img 
-              :src="user.avatar" 
-              :alt="user.name"
-              class="w-12 h-12 rounded-full object-cover"
-            />
-            
-            <div class="flex-1 min-w-0">
-              <h4 class="font-medium text-gray-800 truncate">
-                {{ user.name }}
-              </h4>
-              <p class="text-sm text-gray-500 truncate">
-                {{ user.email }}
-              </p>
-            </div>
+    <div v-else-if="error" class="text-red-500 text-center">
+      {{ error }}
+    </div>
+
+    <div v-else-if="following.length === 0" class="text-center text-gray-500">
+      Нет подписок
+    </div>
+
+    <div v-else class="grid gap-4">
+      <div v-for="user in following" :key="user.id" class="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+        <div class="flex items-center space-x-4">
+          <img :src="user.avatar" :alt="user.name" class="w-12 h-12 rounded-full">
+          <div>
+            <h3 class="font-medium">{{ user.first_name }} {{ user.last_name }}</h3>
+            <p class="text-sm text-gray-500">{{ user.email }}</p>
           </div>
-
-          <!-- Кнопка подписки -->
-          <button
-            v-if="authStore.currentUser?.id !== user.id"
-            @click="handleSubscribe(user.id)"
-            class="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
-            :class="isSubscribedTo(user.id) ? 
-              'bg-gray-100 text-gray-700 hover:bg-gray-200' : 
-              'bg-primary text-white hover:bg-primary-dark'"
-          >
-            {{ isSubscribedTo(user.id) ? 'Отписаться' : 'Подписаться' }}
-          </button>
         </div>
+        
+        <button 
+          class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark"
+          @click="profileStore.unfollowUser(user.id)"
+        >
+          Отписаться
+        </button>
       </div>
     </div>
 
-    <!-- Сообщение об отсутствии подписок -->
-    <div 
-      v-else 
-      class="text-center py-12 text-gray-500"
-    >
-      Пользователь ни на кого не подписан
+    <div v-if="totalFollowing > perPage" class="flex justify-center mt-4">
+      <button 
+        v-for="page in Math.ceil(totalFollowing / perPage)" 
+        :key="page"
+        :class="[
+          'mx-1 px-3 py-1 rounded-md',
+          currentPage === page 
+            ? 'bg-primary text-white' 
+            : 'bg-gray-200 hover:bg-gray-300'
+        ]"
+        @click="handlePageChange(page)"
+      >
+        {{ page }}
+      </button>
     </div>
   </div>
 </template> 

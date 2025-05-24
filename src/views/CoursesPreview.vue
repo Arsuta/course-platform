@@ -1,39 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useCourseStore } from '@/stores/courses'
 import type { Course } from '@/types/course'
 import CourseCard from '@/components/course/CourseCard.vue'
 import { COURSE_CONSTANTS } from '@/constants/course'
 
 const router = useRouter()
+const courseStore = useCourseStore()
+const courses = ref<Course[]>([])
 
-// Демо-курсы для предварительного просмотра
-const previewCourses = ref<Course[]>([
-  {
-    id: 1,
-    title: 'Основы Vue.js 3',
-    description: 'Изучите основы современного фреймворка Vue.js 3 с нуля',
-    category: 'programming',
-    level: 'beginner',
-    image: 'https://picsum.photos/600/400?random=1',
-    price: 0,
-    isFree: true,
-    rating: 4.8,
-    studentsCount: 1234,
-    duration: 1200,
-    modules: [],
-    skills: ['Vue.js 3', 'JavaScript', 'Composition API'],
-    requirements: ['Базовые знания JavaScript'],
-    author: {
-      id: 1,
-      name: 'Иван Петров',
-      avatar: 'https://picsum.photos/100/100?random=1'
-    },
-    updatedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-  // Добавьте больше демо-курсов здесь
-])
+onMounted(async () => {
+  await courseStore.fetchPopularCourses()
+  courses.value = courseStore.popularCourses
+})
 
 const handleEnrollClick = () => {
   router.push({ 
@@ -41,6 +21,14 @@ const handleEnrollClick = () => {
     query: { redirect: '/courses' },
     params: { message: 'Для записи на курс необходима регистрация' }
   })
+}
+
+const getCategoryLabel = (categoryId: keyof typeof COURSE_CONSTANTS.CATEGORY_LABELS) => {
+  return COURSE_CONSTANTS.CATEGORY_LABELS[categoryId]
+}
+
+const getLevelLabel = (level: keyof typeof COURSE_CONSTANTS.LEVEL_LABELS) => {
+  return COURSE_CONSTANTS.LEVEL_LABELS[level]
 }
 
 const formatPrice = (price: number): string => {
@@ -62,7 +50,7 @@ const formatPrice = (price: number): string => {
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div 
-        v-for="course in previewCourses" 
+        v-for="course in courses" 
         :key="course.id"
         class="relative bg-white rounded-xl shadow-lg overflow-hidden group"
       >
@@ -83,10 +71,10 @@ const formatPrice = (price: number): string => {
         <div class="p-6">
           <div class="flex items-center justify-between mb-4">
             <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-              {{ COURSE_CONSTANTS.CATEGORY_LABELS[course.category] }}
+              {{ getCategoryLabel(course.category) }}
             </span>
             <span class="text-sm text-gray-500">
-              {{ COURSE_CONSTANTS.LEVEL_LABELS[course.level] }}
+              {{ getLevelLabel(course.level) }}
             </span>
           </div>
 
@@ -94,7 +82,7 @@ const formatPrice = (price: number): string => {
           <p class="text-gray-600 mb-4 line-clamp-2">{{ course.description }}</p>
 
           <div class="flex items-center justify-between mt-4">
-            <div class="flex items-center space-x-2">
+            <div v-if="course.author" class="flex items-center space-x-2">
               <img 
                 :src="course.author.avatar" 
                 :alt="course.author.name"

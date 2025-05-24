@@ -11,16 +11,27 @@ const router = useRouter()
 const authStore = useAuthStore()
 const courseStore = useCourseStore()
 const selectedCategory = ref('')
+const error = ref<string | null>(null)
+const loading = ref(false)
 
 onMounted(async () => {
-  await courseStore.fetchPopularCourses()
+  try {
+    loading.value = true
+    error.value = null
+    await courseStore.fetchPopularCourses()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курсов'
+    console.error('Error loading courses:', e)
+  } finally {
+    loading.value = false
+  }
 })
 
 const formatPrice = (price: number): string => {
   return price.toLocaleString('ru-RU') + ' ₽'
 }
 
-const handleEnroll = async (courseId: number) => {
+const handleEnroll = async (courseId: string) => {
   if (!authStore.isAuthenticated) {
     router.push({ 
       name: 'login',
@@ -30,12 +41,19 @@ const handleEnroll = async (courseId: number) => {
     return
   }
 
-  const success = await courseStore.enrollCourse(courseId.toString())
-  if (success) {
-    // TODO: Показать уведомление об успешной записи
-    router.push(`/courses/${courseId}`)
+  try {
+    loading.value = true
+    error.value = null
+    const success = await courseStore.enrollCourse(courseId)
+    if (success) {
+      router.push(`/courses/${courseId}`)
+    }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при записи на курс'
+    console.error('Error enrolling in course:', e)
+  } finally {
+    loading.value = false
   }
-  // В случае ошибки уведомление покажется автоматически через error в store
 }
 
 const features = [
@@ -72,18 +90,32 @@ const stats = [
     <section class="bg-gray-50">
       <div class="container mx-auto px-4 py-12">
         <h2 class="text-3xl font-bold text-gray-900 mb-8">Популярные курсы</h2>
-        <div v-if="courseStore.loading" class="text-center py-8">
+        
+        <!-- Обработка ошибок -->
+        <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p class="text-red-600">{{ error }}</p>
+          <button 
+            @click="courseStore.fetchPopularCourses()"
+            class="mt-2 text-sm text-red-600 hover:text-red-800"
+          >
+            Попробовать снова
+          </button>
+        </div>
+
+        <div v-if="loading" class="text-center py-8">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
         </div>
-        <div v-else-if="courseStore.error" class="text-center py-8 text-red-600">
-          {{ courseStore.error }}
-        </div>
+
         <CourseSlider 
-          v-else
+          v-else-if="courseStore.popularCourses.length"
           :courses="courseStore.popularCourses" 
           :formatPrice="formatPrice"
           @enroll="handleEnroll"
         />
+
+        <div v-else class="text-center py-8 text-gray-600">
+          Курсы не найдены
+        </div>
       </div>
     </section>
 

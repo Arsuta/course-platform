@@ -1,4 +1,7 @@
-import type { CourseGradient } from '@/constants/gradients'
+import type { CourseGradient as GradientType } from '@/constants/gradients'
+import type { CourseCategory, CourseLevel } from '@/constants/course'
+
+export type CourseGradient = GradientType
 
 export interface Author {
   id: number
@@ -8,47 +11,50 @@ export interface Author {
 }
 
 export interface Lesson {
-  id: number
+  id: string
   title: string
-  content: string
+  description: string
   duration: number
   type: 'video' | 'text' | 'quiz'
-  videoUrl?: string
+  content: string
   order: number
   isCompleted?: boolean
+  videoUrl?: string
 }
 
 export interface Module {
-  id: number
+  id: string
   title: string
   description: string
-  order: number
   lessons: Lesson[]
+  order: number
   isCompleted?: boolean
 }
 
 export interface Course {
-  id: number
+  id: string
   title: string
   description: string
-  fullDescription?: string
-  category: 'programming' | 'design' | 'marketing' | 'business'
-  level: 'beginner' | 'intermediate' | 'advanced'
-  image: string
   price: number
-  isFree: boolean
+  duration: number
+  level: CourseLevel
   rating: number
-  studentsCount: number
-  duration: number // общая продолжительность в минутах
-  modules: Module[]
-  author: Author
-  skills: string[] // навыки, которые получит студент
-  requirements: string[] // требования к студенту
+  thumbnail: string
+  category_id: string
+  category: CourseCategory
+  created_by: string
+  status: string
+  students_count: number
+  created_at: string
+  updated_at: string
+  image?: string
+  gradient?: CourseGradient
+  modules?: Module[]
   isEnrolled?: boolean
-  progress?: number // процент прохождения курса
-  updatedAt: string
-  createdAt: string
-  gradient: CourseGradient
+  author?: Author
+  isFree?: boolean
+  requirements?: string[]
+  skills?: string[]
 }
 
 export interface CourseResponse {
@@ -66,4 +72,25 @@ export interface CourseProgress {
   lastViewedLesson?: number
   startedAt: string
   lastAccessAt: string
+}
+
+export interface PaginationQuery {
+  page: number
+  per_page: number
+  sort_by?: string
+  order?: 'asc' | 'desc'
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}
+
+export interface APIResponse<T> {
+  data: T
+  status: number
+  message?: string
 }

@@ -111,7 +111,7 @@ const formatPrice = (price: number): string => {
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-4 text-sm text-gray-500">
                   <span>{{ formatDuration(course.duration) }}</span>
-                  <span>{{ course.modules.length }} модулей</span>
+                  <span>{{ course.modules?.length || 0 }} модулей</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-yellow-400">★</span>

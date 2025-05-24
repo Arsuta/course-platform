@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue'
 import ProfileBlog from '@/components/profile/ProfileBlog.vue'
@@ -10,21 +10,39 @@ import ProfileAchievements from '@/components/profile/ProfileAchievements.vue'
 import ProfileFollowers from '@/components/profile/ProfileFollowers.vue'
 import ProfileFollowing from '@/components/profile/ProfileFollowing.vue'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types/user'
+import type { APIResponse } from '@/api/base'
 
 const route = useRoute()
 const authStore = useAuthStore()
 
 const activeTab = ref('blog')
+const profileUser = ref<User | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-// Получаем данные пользователя
-const user = computed(() => {
-  const profileId = Number(route.params.id)
-  return authStore.getUserById(profileId)
+const fetchUser = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const userId = route.params.id as string
+    const response = await authStore.getUserById(userId)
+    profileUser.value = (response as any).data || response as User
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке пользователя'
+    profileUser.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchUser()
 })
 
 // Проверяем, является ли текущий пользователь владельцем профиля
 const isOwner = computed(() => {
-  return authStore.currentUser?.id === Number(route.params.id)
+  return authStore.currentUser?.id === route.params.id
 })
 
 // Базовые вкладки, доступные всем
@@ -91,7 +109,15 @@ const handleTabChange = (tabId: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen flex">
+  <div v-if="loading" class="min-h-screen flex justify-center items-center">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+
+  <div v-else-if="error" class="min-h-screen flex justify-center items-center text-red-500">
+    {{ error }}
+  </div>
+
+  <div v-else class="min-h-screen flex">
     <!-- Боковая панель -->
     <div class="w-80 bg-white shadow-xl">
       <ProfileSidebar />

@@ -2,13 +2,14 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/api/types'
 
 const route = useRoute()
 const authStore = useAuthStore()
 
 // Проверяем, является ли текущий пользователь владельцем профиля
 const isOwner = computed(() => {
-  return authStore.currentUser?.id === Number(route.params.id)
+  return authStore.currentUser?.id === route.params.id
 })
 
 // Состояние для нового поста
@@ -22,46 +23,36 @@ const newPost = ref({
 })
 
 // Имитация списка постов
-const posts = ref([
+const posts = ref<Post[]>([
   {
     id: 1,
-    title: 'Мой путь в программировании',
-    content: 'Сегодня я хочу поделиться своим опытом изучения программирования. Начал я с простых HTML и CSS, затем перешел к JavaScript...',
+    title: 'Мой опыт изучения Vue.js',
+    content: 'Сегодня я хочу поделиться своим опытом изучения Vue.js...',
     date: '2024-03-15',
     likes: 24,
     comments: [
       {
         id: 1,
-        author: 'Иван Закомалдин',
-        avatar: '/images/Ivan.jpg',
-        content: 'Отличная статья! Очень мотивирует на дальнейшее изучение.',
-        date: '2024-03-15'
-      },
-      {
-        id: 2,
-        author: 'Матвей Ручин',
-        avatar: '/images/Math.jpg',
-        content: 'Полностью согласен, сам прошел похожий путь.',
-        date: '2024-03-15'
-      },
-      {
-        id: 3,
-        author: 'Арсений Канеп',
-        avatar: '/images/Arseniy.jpg',
-        content: 'Было бы интересно узнать больше про твой опыт с фреймворками.',
+        author: 'Анна Смирнова',
+        avatar: '/images/Anna.jpg',
+        content: 'Отличная статья! Очень полезно.',
         date: '2024-03-15'
       }
     ],
     isLiked: false,
-    image: '',
-    courseLink: '',
-    courseName: '',
-    showAllComments: false
+    image: 'https://picsum.photos/800/400',
+    courseLink: '/courses/2',
+    courseName: 'Продвинутый Vue.js',
+    showAllComments: false,
+    author: {
+      name: 'Иван Петров',
+      avatar: '/images/Ivan.jpg'
+    }
   },
   {
     id: 2,
     title: 'Топ-5 курсов для начинающих',
-    content: 'После прохождения множества курсов, я выбрал самые полезные для новичков. Вот мой список рекомендаций...',
+    content: 'После прохождения множества курсов, я выбрал самые полезные для новичков...',
     date: '2024-03-10',
     likes: 42,
     comments: [
@@ -77,7 +68,11 @@ const posts = ref([
     image: 'https://picsum.photos/800/400',
     courseLink: '/courses/1',
     courseName: 'Основы Vue.js 3',
-    showAllComments: false
+    showAllComments: false,
+    author: {
+      name: 'Мария Иванова',
+      avatar: '/images/Maria.jpg'
+    }
   }
 ])
 
@@ -99,7 +94,11 @@ const createPost = () => {
     image: newPost.value.image,
     courseLink: newPost.value.courseLink,
     courseName: newPost.value.courseName,
-    showAllComments: false
+    showAllComments: false,
+    author: {
+      name: authStore.currentUser?.first_name || 'Гость',
+      avatar: authStore.currentUser?.avatar || 'https://via.placeholder.com/40'
+    }
   })
 
   // Очищаем форму
@@ -191,19 +190,53 @@ const triggerImageUpload = () => {
   imageInput.value?.click()
 }
 
-// Функция для добавления комментария
-const addComment = (post: any) => {
-  if (!newComment.value.trim()) return
+// Интерфейс для комментария
+interface Comment {
+  id: number;
+  author: string;
+  avatar: string;
+  content: string;
+  date: string;
+}
+
+// Интерфейс для поста
+interface Post {
+  id: number;
+  title: string;
+  content: string;
+  date: string;
+  likes: number;
+  comments: Comment[];
+  isLiked?: boolean;
+  image?: string;
+  courseLink?: string;
+  courseName?: string;
+  showAllComments?: boolean;
+  author: {
+    name: string;
+    avatar: string;
+  };
+}
+
+const getCurrentUserInfo = () => {
+  return {
+    name: authStore.currentUser?.first_name || 'Гость',
+    avatar: authStore.currentUser?.avatar || 'https://via.placeholder.com/40'
+  }
+}
+
+// Добавление комментария
+const addComment = (post: Post, commentText: string) => {
+  if (!commentText.trim()) return
   
+  const userInfo = getCurrentUserInfo()
   post.comments.push({
     id: Date.now(),
-    author: authStore.currentUser?.name || 'Гость',
-    avatar: authStore.currentUser?.avatar || 'https://via.placeholder.com/40',
-    content: newComment.value,
+    author: userInfo.name,
+    avatar: userInfo.avatar,
+    content: commentText,
     date: new Date().toISOString().split('T')[0]
   })
-  
-  newComment.value = ''
 }
 
 // Функция для переключения отображения комментариев
@@ -501,7 +534,7 @@ const toggleComments = (post: any) => {
                 />
                 <div class="flex justify-end mt-2">
                   <button
-                    @click="addComment(post)"
+                    @click="addComment(post, newComment)"
                     class="px-4 py-1 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
                     :disabled="!newComment.trim()"
                   >

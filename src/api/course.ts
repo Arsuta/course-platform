@@ -1,4 +1,4 @@
-import { apiClient } from './client'
+import { apiClient } from '@/api/client'
 import type { Course, CourseResponse } from '@/types/course'
 
 export const courseApi = {

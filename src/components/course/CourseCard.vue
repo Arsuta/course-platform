@@ -2,34 +2,55 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Course } from '@/types/course'
-import { COURSE_CONSTANTS } from '@/constants/course'
+import type { CourseGradient } from '@/constants/gradients'
 import { COURSE_GRADIENTS } from '@/constants/gradients'
+import { defineProps, defineEmits } from 'vue'
+
+const categoryLabels = {
+  programming: 'Программирование',
+  design: 'Дизайн',
+  marketing: 'Маркетинг',
+  business: 'Бизнес'
+} as const
+
+const levelLabels = {
+  beginner: 'Начинающий',
+  intermediate: 'Средний',
+  advanced: 'Продвинутый'
+} as const
 
 const props = defineProps<{
   course: Course
+  onEnroll?: (courseId: string) => void
 }>()
 
 const emit = defineEmits<{
-  enroll: [id: number]
+  (e: 'enroll', courseId: string): void
 }>()
 
 const router = useRouter()
 
 const categoryLabel = computed(() => {
-  return COURSE_CONSTANTS.CATEGORY_LABELS[props.course.category]
+  return getCategoryLabel(props.course.category)
 })
 
 const levelLabel = computed(() => {
-  return COURSE_CONSTANTS.LEVEL_LABELS[props.course.level]
+  return getLevelLabel(props.course.level)
 })
 
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60)
-  return `${hours} ч ${minutes % 60} мин`
+  const remainingMinutes = minutes % 60
+  
+  if (hours === 0) {
+    return `${remainingMinutes} мин`
+  }
+  
+  return `${hours} ч ${remainingMinutes > 0 ? `${remainingMinutes} мин` : ''}`
 }
 
 const formatPrice = (price: number): string => {
-  return price.toLocaleString('ru-RU') + ' ₽'
+  return price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽`
 }
 
 const handleClick = () => {
@@ -39,16 +60,25 @@ const handleClick = () => {
   })
 }
 
-const getDefaultGradient = (id: number) => {
-  const gradients = [
-    COURSE_GRADIENTS.VUE,
-    COURSE_GRADIENTS.REACT,
-    COURSE_GRADIENTS.DESIGN,
-    COURSE_GRADIENTS.MARKETING,
-    COURSE_GRADIENTS.DOCKER,
-    COURSE_GRADIENTS.DEFAULT
-  ]
-  return gradients[id % gradients.length]
+const getDefaultGradient = (id: string): CourseGradient => {
+  const index = parseInt(id, 10) % COURSE_GRADIENTS.length
+  return COURSE_GRADIENTS[index]
+}
+
+const handleEnroll = () => {
+  if (props.onEnroll) {
+    props.onEnroll(props.course.id)
+  } else {
+    emit('enroll', props.course.id)
+  }
+}
+
+const getCategoryLabel = (categoryId: string) => {
+  return categoryLabels[categoryId as keyof typeof categoryLabels] || categoryId
+}
+
+const getLevelLabel = (level: string) => {
+  return levelLabels[level as keyof typeof levelLabels] || level
 }
 </script>
 
@@ -96,7 +126,7 @@ const getDefaultGradient = (id: number) => {
       <div class="mt-auto">
         <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
           <span>{{ formatDuration(course.duration) }}</span>
-          <span>{{ course.modules.length }} модулей</span>
+          <span v-if="course.modules">{{ course.modules.length }} модулей</span>
         </div>
 
         <!-- Разделитель -->
@@ -106,7 +136,7 @@ const getDefaultGradient = (id: number) => {
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <span class="text-sm font-medium text-gray-900">
-              {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
+              {{ formatPrice(course.price) }}
             </span>
             <div class="flex items-center space-x-1">
               <span class="text-yellow-400">★</span>
@@ -115,7 +145,7 @@ const getDefaultGradient = (id: number) => {
           </div>
           <button 
             class="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors"
-            @click.stop="$emit('enroll', course.id)"
+            @click.stop="handleEnroll"
           >
             {{ course.isEnrolled ? 'Продолжить' : 'Записаться' }}
           </button>

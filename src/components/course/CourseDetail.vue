@@ -2,239 +2,218 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
-import { CourseModel } from '@/models/course'
-import type { Course, Module } from '@/types/course'
+import { useAuthStore } from '@/stores/auth'
+import { useCourseStore } from '@/stores/courses'
+import type { Course, Lesson, Module } from '@/types/course'
 import { COURSE_CONSTANTS } from '@/constants/course'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+const courseStore = useCourseStore()
 
 const course = ref<Course | null>(null)
+const lessons = ref<Lesson[]>([])
 const selectedModule = ref<Module | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const courseGradients = {
+  programming: 'bg-gradient-to-r from-blue-500 to-purple-500',
+  design: 'bg-gradient-to-r from-pink-500 to-orange-500',
+  marketing: 'bg-gradient-to-r from-green-500 to-teal-500',
+  business: 'bg-gradient-to-r from-yellow-500 to-red-500'
+} as const
+
+type CourseCategory = keyof typeof courseGradients
+
 const formattedDescription = computed(() => {
-  if (!course.value?.fullDescription) return ''
-  return marked(course.value.fullDescription)
+  if (!course.value) return ''
+  return marked(course.value.description)
 })
 
-const categoryLabel = computed(() => {
-  if (!course.value?.category) return ''
-  return COURSE_CONSTANTS.CATEGORY_LABELS[course.value.category]
-})
+const categoryLabels = {
+  programming: 'Программирование',
+  design: 'Дизайн',
+  marketing: 'Маркетинг',
+  business: 'Бизнес'
+} as const
 
-const levelLabel = computed(() => {
-  if (!course.value?.level) return ''
-  return COURSE_CONSTANTS.LEVEL_LABELS[course.value.level]
-})
+const levelLabels = {
+  beginner: 'Начинающий',
+  intermediate: 'Средний',
+  advanced: 'Продвинутый'
+} as const
+
+const getCategoryLabel = (categoryId: string) => {
+  return categoryLabels[categoryId as keyof typeof categoryLabels] || categoryId
+}
+
+const getLevelLabel = (level: string) => {
+  return levelLabels[level as keyof typeof levelLabels] || level
+}
 
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60)
-  return `${hours} ч ${minutes % 60} мин`
+  const remainingMinutes = minutes % 60
+  
+  if (hours === 0) {
+    return `${remainingMinutes} мин`
+  }
+  
+  return `${hours} ч ${remainingMinutes > 0 ? `${remainingMinutes} мин` : ''}`
 }
 
 const formatPrice = (price: number): string => {
-  return price.toLocaleString('ru-RU') + ' ₽'
+  return price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽`
 }
 
-const loadCourse = async () => {
+const categoryToType: Record<string, CourseCategory> = {
+  '1': 'programming',
+  '2': 'design',
+  '3': 'marketing',
+  '4': 'business'
+}
+
+const getCategoryGradient = (categoryId: string): string => {
+  const defaultGradient = 'bg-gradient-to-r from-gray-500 to-gray-700'
+  const categoryType = categoryToType[categoryId]
+  return categoryType ? courseGradients[categoryType] : defaultGradient
+}
+
+onMounted(async () => {
   try {
     loading.value = true
-    const courseId = Number(route.params.id)
-    const data = await CourseModel.getCourseById(courseId)
-    if (!data) {
-      error.value = 'Курс не найден'
-      return
+    const courseId = route.params.id as string
+    const response = await courseStore.fetchCourseById(courseId)
+    course.value = response.data
+    if (course.value?.modules?.length) {
+      selectedModule.value = course.value.modules[0]
     }
-    course.value = data
+
+    const lessonsResponse = await courseStore.getCourseLessons(courseId)
+    lessons.value = lessonsResponse.data
   } catch (e) {
-    error.value = 'Ошибка при загрузке курса'
-    console.error(e)
+    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курса'
   } finally {
     loading.value = false
   }
-}
+})
 
-const enrollInCourse = async () => {
+const handleEnroll = async () => {
+  if (!authStore.isAuthenticated) {
+    router.push({ 
+      name: 'login',
+      query: { redirect: route.fullPath },
+      params: { message: 'Для записи на курс необходима авторизация' }
+    })
+    return
+  }
+
   if (!course.value) return
   
-  try {
-    await CourseModel.enrollCourse(course.value.id)
-    // После успешной записи переходим к первому уроку
-    const firstModule = course.value.modules[0]
-    const firstLesson = firstModule.lessons[0]
-    router.push({
-      name: 'lesson-view',
-      params: {
-        courseId: course.value.id,
-        lessonId: firstLesson.id
-      }
-    })
-  } catch (error) {
-    console.error('Failed to enroll:', error)
-    // TODO: Показать уведомление об ошибке
+  const success = await courseStore.enrollCourse(course.value.id)
+  if (success) {
+    // TODO: Показать уведомление об успешной записи
+    router.push(`/courses/${course.value.id}/learn`)
   }
 }
-
-onMounted(loadCourse)
 </script>
 
 <template>
+  <div class="min-h-screen bg-gray-50">
   <div v-if="loading" class="flex justify-center items-center min-h-screen">
-    <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
   </div>
 
-  <div v-else-if="error" class="flex justify-center items-center min-h-screen">
-    <div class="text-red-500">{{ error }}</div>
+    <div v-else-if="error" class="container mx-auto px-4 py-8 text-center text-red-600">
+      {{ error }}
   </div>
 
-  <div v-else-if="course" class="container mx-auto px-4 py-8 space-y-8">
-    <!-- Заголовок и описание -->
-    <div class="max-w-4xl space-y-6">
-      <div class="flex items-center space-x-4">
-        <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-          {{ categoryLabel }}
-        </span>
-        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-          {{ levelLabel }}
-        </span>
+    <div v-else-if="course" class="container mx-auto px-4 py-8">
+      <!-- Заголовок курса -->
+      <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ course.title }}</h1>
+        <div class="flex items-center space-x-4 text-gray-600">
+          <span>{{ formatDuration(course.duration) }}</span>
+          <span>•</span>
+          <span>{{ getLevelLabel(course.level) }}</span>
+          <span>•</span>
+          <span>{{ course.students_count }} студентов</span>
+        </div>
       </div>
       
-      <h1 class="text-4xl font-bold text-gray-900">{{ course.title }}</h1>
-      <p class="text-xl text-gray-600">{{ course.description }}</p>
-    </div>
-
-    <!-- Основной контент -->
+      <!-- Основная информация -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Левая колонка -->
-      <div class="lg:col-span-2 space-y-8">
         <!-- Описание курса -->
-        <div class="prose max-w-none" v-html="formattedDescription" />
-
-        <!-- Программа курса -->
-        <div class="space-y-4">
-          <h2 class="text-2xl font-bold">Программа курса</h2>
-          <div class="space-y-4">
-            <div
-              v-for="module in course.modules"
-              :key="module.id"
-              class="border rounded-lg overflow-hidden"
-            >
-              <div
-                class="flex items-center justify-between p-4 bg-gray-50 cursor-pointer"
-                @click="selectedModule = selectedModule?.id === module.id ? null : module"
-              >
-                <div>
-                  <h3 class="font-medium">{{ module.title }}</h3>
-                  <p class="text-sm text-gray-500">{{ module.description }}</p>
-                </div>
-                <div class="text-sm text-gray-500">
-                  {{ module.lessons.length }} уроков
-                </div>
+        <div class="lg:col-span-2 space-y-8">
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">О курсе</h2>
+            <div class="prose max-w-none" v-html="formattedDescription"></div>
               </div>
 
-              <div v-show="selectedModule?.id === module.id">
-                <div
-                  v-for="lesson in module.lessons"
-                  :key="lesson.id"
-                  class="p-4 hover:bg-gray-50 border-t"
-                >
-                  <div class="flex items-center justify-between">
-                    <span>{{ lesson.title }}</span>
-                    <span class="text-sm text-gray-500">
-                      {{ formatDuration(lesson.duration) }}
-                    </span>
-                  </div>
-                </div>
+          <!-- Список уроков -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Программа курса</h2>
+            <div class="space-y-4">
+              <div v-for="lesson in lessons" :key="lesson.id" class="border-b border-gray-200 last:border-0 pb-4">
+                <h3 class="text-lg font-semibold text-gray-900">{{ lesson.title }}</h3>
+                <p class="text-gray-600 mt-1">{{ lesson.content }}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Навыки -->
-        <div class="space-y-4">
-          <h2 class="text-2xl font-bold">Чему вы научитесь</h2>
-          <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <li
-              v-for="skill in course.skills"
-              :key="skill"
-              class="flex items-center space-x-2"
-            >
-              <span class="text-primary">✓</span>
-              <span>{{ skill }}</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Правая колонка -->
-      <div class="lg:col-span-1">
-        <div class="sticky top-8 space-y-6 bg-white rounded-xl shadow-sm p-6">
-          <!-- Превью видео или изображение -->
-          <div class="aspect-video rounded-lg overflow-hidden bg-gray-100">
-            <img
-              :src="course.image"
-              :alt="course.title"
-              class="w-full h-full object-cover"
-            />
-          </div>
-
-          <!-- Цена и рейтинг -->
-          <div class="flex items-center justify-between">
+        <!-- Боковая панель -->
+        <div class="space-y-6">
+          <!-- Карточка с ценой -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-6">
             <div class="text-3xl font-bold">
-              {{ course.isFree ? 'Бесплатно' : formatPrice(course.price) }}
+                {{ formatPrice(course.price) }}
             </div>
             <div class="flex items-center space-x-1">
               <span class="text-yellow-400">★</span>
-              <span class="font-medium">{{ course.rating }}</span>
+                <span>{{ course.rating.toFixed(1) }}</span>
             </div>
           </div>
 
           <!-- Кнопка записи -->
           <button
-            @click="enrollInCourse"
+              @click="handleEnroll"
             class="w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
           >
             Записаться на курс
           </button>
 
           <!-- Информация о курсе -->
-          <div class="space-y-3 text-sm text-gray-500">
-            <div class="flex justify-between">
-              <span>Продолжительность</span>
-              <span class="font-medium text-gray-900">
-                {{ formatDuration(course.duration) }}
-              </span>
+            <div class="mt-6 space-y-4 text-gray-600">
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ formatDuration(course.duration) }}</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>{{ getLevelLabel(course.level) }}</span>
             </div>
-            <div class="flex justify-between">
-              <span>Количество уроков</span>
-              <span class="font-medium text-gray-900">
-                {{ course.modules.reduce((acc, m) => acc + m.lessons.length, 0) }}
-              </span>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>{{ course.students_count }} студентов</span>
             </div>
-            <div class="flex justify-between">
-              <span>Студентов</span>
-              <span class="font-medium text-gray-900">
-                {{ course.studentsCount }}
-              </span>
             </div>
           </div>
 
-          <!-- Автор курса -->
-          <div class="pt-6 border-t">
-            <div class="flex items-center space-x-4">
-              <img
-                :src="course.author.avatar"
-                :alt="course.author.name"
-                class="w-12 h-12 rounded-full"
-              />
-              <div>
-                <div class="font-medium">{{ course.author.name }}</div>
-                <div class="text-sm text-gray-500">
-                  {{ course.author.description }}
-                </div>
-              </div>
+          <!-- Категория курса -->
+          <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Категория</h3>
+            <div :class="getCategoryGradient(course.category_id)" class="text-white rounded-lg p-4">
+              {{ getCategoryLabel(course.category_id) }}
             </div>
           </div>
         </div>

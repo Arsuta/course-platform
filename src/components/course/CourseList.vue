@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { Course } from '@/types/course'
 import { COURSE_CONSTANTS } from '@/constants/course'
 import CourseCard from './CourseCard.vue'
+import { useCourseStore } from '@/stores/courses'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps<{
   courses?: Course[]
@@ -11,6 +14,30 @@ const props = defineProps<{
 const searchQuery = ref('')
 const selectedCategory = ref<string>(COURSE_CONSTANTS.CATEGORIES.ALL)
 const selectedLevel = ref<string>(COURSE_CONSTANTS.LEVELS.ALL)
+
+const courseStore = useCourseStore()
+const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
+
+onMounted(async () => {
+  await courseStore.fetchCourses()
+})
+
+const formatPrice = (price: number): string => {
+  return price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽`
+}
+
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  
+  if (hours === 0) {
+    return `${remainingMinutes} мин`
+  }
+  
+  return `${hours} ч ${remainingMinutes > 0 ? `${remainingMinutes} мин` : ''}`
+}
 
 const filteredCourses = computed(() => {
   return (props.courses || []).filter(course => {
@@ -24,8 +51,19 @@ const filteredCourses = computed(() => {
   })
 })
 
-const handleEnroll = (courseId: number) => {
-  console.log('Enrolling in course:', courseId)
+const handleEnroll = async (courseId: string) => {
+  if (!authStore.isAuthenticated) {
+    router.push({ 
+      name: 'login',
+      query: { redirect: route.fullPath }
+    })
+    return
+  }
+
+  const success = await courseStore.enrollCourse(courseId)
+  if (success) {
+    router.push(`/courses/${courseId}/learn`)
+  }
 }
 </script>
 

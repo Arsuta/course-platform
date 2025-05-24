@@ -7,21 +7,21 @@ import { marked } from 'marked'
 const route = useRoute()
 
 const course = computed(() => {
-  return courses.find(c => c.id === Number(route.params.courseId))
+  return courses.find(c => c.id === route.params.courseId)
 })
 
 const currentModule = computed(() => {
-  if (!course.value) return null
-  return course.value.modules.find(m => m.lessons.some(l => l.id === Number(route.params.lessonId)))
+  if (!course.value?.modules) return null
+  return course.value.modules.find(m => m.lessons.some(l => l.id === route.params.lessonId))
 })
 
 const currentLesson = computed(() => {
   if (!currentModule.value) return null
-  return currentModule.value.lessons.find(l => l.id === Number(route.params.lessonId))
+  return currentModule.value.lessons.find(l => l.id === route.params.lessonId)
 })
 
 const nextLesson = computed(() => {
-  if (!course.value || !currentModule.value || !currentLesson.value) return null
+  if (!course.value?.modules || !currentModule.value || !currentLesson.value) return null
 
   // Поиск следующего урока в текущем модуле
   const currentLessonIndex = currentModule.value.lessons.findIndex(l => l.id === currentLesson.value?.id)
@@ -40,7 +40,7 @@ const nextLesson = computed(() => {
 })
 
 const previousLesson = computed(() => {
-  if (!course.value || !currentModule.value || !currentLesson.value) return null
+  if (!course.value?.modules || !currentModule.value || !currentLesson.value) return null
 
   // Поиск предыдущего урока в текущем модуле
   const currentLessonIndex = currentModule.value.lessons.findIndex(l => l.id === currentLesson.value?.id)

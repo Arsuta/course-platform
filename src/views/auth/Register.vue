@@ -8,67 +8,52 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 
-interface RegisterForm {
-  email: string
-  password: string
-  confirmPassword: string
-  role: 'student' | 'author' | 'admin'
-}
-
-const form = ref<RegisterForm>({
-  email: '',
-  password: '',
-  confirmPassword: '',
-  role: 'student'
-})
-
-const isLoading = ref(false)
-const error = ref('')
+const email = ref('')
+const password = ref('')
+const firstName = ref('')
+const lastName = ref('')
+const loading = ref(false)
+const error = ref<string | null>(null)
+const showVerification = ref(false)
 
 const isVerifying = computed(() => authStore.isVerifying)
 const verificationEmail = computed(() => authStore.verificationEmail)
 
 const handleSubmit = async () => {
   try {
-    if (form.value.password !== form.value.confirmPassword) {
-      error.value = 'Пароли не совпадают'
-      return
-    }
-
-    if (form.value.password.length < 8) {
-      error.value = 'Пароль должен содержать минимум 8 символов'
-      return
-    }
-
-    isLoading.value = true
-    error.value = ''
+    loading.value = true
+    error.value = null
     
-    await authStore.register(form.value.email, form.value.password, form.value.role)
+    await authStore.register({
+      email: email.value,
+      password: password.value,
+      first_name: firstName.value,
+      last_name: lastName.value
+    })
+    
+    showVerification.value = true
   } catch (e) {
-    error.value = 'Ошибка при регистрации. Возможно, email уже занят.'
+    error.value = e instanceof Error ? e.message : 'Ошибка при регистрации'
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 }
 
-const handleVerifyCode = async (code: string) => {
+const handleVerification = async (code: string) => {
   try {
-    isLoading.value = true
-    error.value = ''
+    loading.value = true
+    error.value = null
     await authStore.verifyEmail(code)
-    router.push('/')
+    router.push('/login')
   } catch (e) {
-    error.value = 'Неверный код подтверждения'
+    error.value = e instanceof Error ? e.message : 'Ошибка при подтверждении'
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 }
 
-const handleCancelVerification = () => {
-  authStore.$patch({
-    isVerifying: false,
-    verificationEmail: null
-  })
+const handleCancel = () => {
+  showVerification.value = false
 }
 
 const handleGoogleRegister = () => {
@@ -80,12 +65,12 @@ const handleGoogleRegister = () => {
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <VerificationCode
-      v-if="isVerifying"
+      v-if="showVerification"
       :email="verificationEmail!"
-      :is-loading="isLoading"
+      :is-loading="loading"
       :error="error"
-      @submit="handleVerifyCode"
-      @cancel="handleCancelVerification"
+      @submit="handleVerification"
+      @cancel="handleCancel"
     />
     
     <div v-else class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg">
@@ -105,7 +90,7 @@ const handleGoogleRegister = () => {
             <label for="email-address" class="sr-only">Email</label>
             <input
               id="email-address"
-              v-model="form.email"
+              v-model="email"
               name="email"
               type="email"
               required
@@ -117,7 +102,7 @@ const handleGoogleRegister = () => {
             <label for="password" class="sr-only">Пароль</label>
             <input
               id="password"
-              v-model="form.password"
+              v-model="password"
               name="password"
               type="password"
               required
@@ -126,41 +111,40 @@ const handleGoogleRegister = () => {
             >
           </div>
           <div>
-            <label for="confirm-password" class="sr-only">Подтвердите пароль</label>
+            <label for="first-name" class="sr-only">Имя</label>
             <input
-              id="confirm-password"
-              v-model="form.confirmPassword"
-              name="confirm-password"
-              type="password"
+              id="first-name"
+              v-model="firstName"
+              name="first-name"
+              type="text"
               required
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-              placeholder="Подтвердите пароль"
+              placeholder="Имя"
             >
           </div>
           <div>
-            <label for="role" class="sr-only">Роль</label>
-            <select
-              id="role"
-              v-model="form.role"
-              name="role"
+            <label for="last-name" class="sr-only">Фамилия</label>
+            <input
+              id="last-name"
+              v-model="lastName"
+              name="last-name"
+              type="text"
               required
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+              placeholder="Фамилия"
             >
-              <option value="student">Студент</option>
-              <option value="author">Автор курсов</option>
-            </select>
           </div>
         </div>
 
         <div>
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="loading"
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
               <svg 
-                v-if="!isLoading"
+                v-if="!loading"
                 class="h-5 w-5 text-primary-dark group-hover:text-primary-light" 
                 xmlns="http://www.w3.org/2000/svg" 
                 viewBox="0 0 20 20" 
@@ -195,7 +179,7 @@ const handleGoogleRegister = () => {
                 />
               </svg>
             </span>
-            {{ isLoading ? 'Регистрация...' : 'Зарегистрироваться' }}
+            {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
           </button>
         </div>
 
