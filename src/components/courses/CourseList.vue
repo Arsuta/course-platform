@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Course } from '@/types/course'
+import { useCourseStore } from '@/stores/courses'
+import { formatPrice, formatDuration } from '@/utils/formatters'
 
 const props = defineProps<{
   courses?: Course[]
@@ -10,26 +12,17 @@ const searchQuery = ref('')
 const selectedCategory = ref<string>('all')
 const selectedLevel = ref<string>('all')
 
+const courseStore = useCourseStore()
+
 const filteredCourses = computed(() => {
   return (props.courses || []).filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = selectedCategory.value === 'all' || course.category === selectedCategory.value
+    const matchesCategory = selectedCategory.value === 'all' || course.category?.id === selectedCategory.value
     const matchesLevel = selectedLevel.value === 'all' || course.level === selectedLevel.value
     return matchesSearch && matchesCategory && matchesLevel
   })
 })
-
-
-
-const formatDuration = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60)
-  return `${hours} ч ${minutes % 60} мин`
-}
-
-const formatPrice = (price: number): string => {
-  return price.toLocaleString('ru-RU') + ' ₽'
-}
 </script>
 
 <template>

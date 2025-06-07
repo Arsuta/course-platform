@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { courses } from '@/mocks/courses'
 import { marked } from 'marked'
+import type { Course, Lesson, Module } from '@/types/course'
+import { formatDuration } from '@/utils/formatters'
 
 const route = useRoute()
 
@@ -58,11 +60,6 @@ const previousLesson = computed(() => {
   return null
 })
 
-const formatDuration = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60)
-  return `${hours} ч ${minutes % 60} мин`
-}
-
 const markLessonAsCompleted = () => {
   if (currentLesson.value) {
     currentLesson.value.isCompleted = true
@@ -93,7 +90,7 @@ const markLessonAsCompleted = () => {
                 {{ currentLesson.title }}
               </h1>
               <span class="text-sm text-gray-500">
-                {{ formatDuration(currentLesson.duration) }}
+                {{ currentLesson.duration ? formatDuration(currentLesson.duration) : 'Длительность не указана' }}
               </span>
             </div>
 
@@ -194,7 +191,9 @@ const markLessonAsCompleted = () => {
                           {{ lesson.title }}
                         </span>
                       </div>
-                      <span class="text-sm text-gray-500">{{ formatDuration(lesson.duration) }}</span>
+                      <span class="text-sm text-gray-500">
+                        {{ lesson.duration ? formatDuration(lesson.duration) : 'Длительность не указана' }}
+                      </span>
                     </router-link>
                   </div>
                 </div>

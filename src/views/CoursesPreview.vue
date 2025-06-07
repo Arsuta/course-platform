@@ -2,8 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCourseStore } from '@/stores/courses'
-import type { Course } from '@/types/course'
-import CourseCard from '@/components/course/CourseCard.vue'
+import type { Course } from '@/api/types'
+import type { CategoryId } from '@/types/course'
 import { COURSE_CONSTANTS } from '@/constants/course'
 
 const router = useRouter()
@@ -23,12 +23,12 @@ const handleEnrollClick = () => {
   })
 }
 
-const getCategoryLabel = (categoryId: keyof typeof COURSE_CONSTANTS.CATEGORY_LABELS) => {
-  return COURSE_CONSTANTS.CATEGORY_LABELS[categoryId]
+const getCategoryLabel = (categoryId: string) => {
+  return COURSE_CONSTANTS?.CATEGORY_LABELS?.[categoryId as CategoryId] || categoryId
 }
 
-const getLevelLabel = (level: keyof typeof COURSE_CONSTANTS.LEVEL_LABELS) => {
-  return COURSE_CONSTANTS.LEVEL_LABELS[level]
+const getLevelLabel = (level: string) => {
+  return COURSE_CONSTANTS?.LEVEL_LABELS?.[level as keyof typeof COURSE_CONSTANTS.LEVEL_LABELS] || level
 }
 
 const formatPrice = (price: number): string => {
@@ -57,13 +57,12 @@ const formatPrice = (price: number): string => {
         <!-- Превью изображение -->
         <div class="relative aspect-video overflow-hidden">
           <img 
-            :src="course.image" 
+            :src="course.cover_image || '/images/default-course.jpg'" 
             :alt="course.title"
             class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div 
             class="absolute inset-0 bg-gradient-to-br opacity-60"
-            :class="course.gradient"
           ></div>
         </div>
 
@@ -71,10 +70,10 @@ const formatPrice = (price: number): string => {
         <div class="p-6">
           <div class="flex items-center justify-between mb-4">
             <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-              {{ getCategoryLabel(course.category) }}
+              {{ getCategoryLabel(course.category_id) }}
             </span>
             <span class="text-sm text-gray-500">
-              {{ getLevelLabel(course.level) }}
+              {{ getLevelLabel(course.status) }}
             </span>
           </div>
 
@@ -85,10 +84,10 @@ const formatPrice = (price: number): string => {
             <div v-if="course.author" class="flex items-center space-x-2">
               <img 
                 :src="course.author.avatar" 
-                :alt="course.author.name"
+                :alt="`${course.author.first_name} ${course.author.last_name}`"
                 class="w-8 h-8 rounded-full"
               />
-              <span class="text-sm text-gray-600">{{ course.author.name }}</span>
+              <span class="text-sm text-gray-600">{{ course.author.first_name }} {{ course.author.last_name }}</span>
             </div>
             <div class="flex items-center space-x-1 text-yellow-400">
               <span>★</span>

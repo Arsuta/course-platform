@@ -2,10 +2,15 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import type { User } from '@/api/types'
 
 const route = useRoute()
 const authStore = useAuthStore()
+
+// Вычисляемое свойство для имени пользователя
+const userName = computed(() => {
+  const user = authStore.currentUser
+  return user ? `${user.first_name} ${user.last_name}` : 'Гость'
+})
 
 // Проверяем, является ли текущий пользователь владельцем профиля
 const isOwner = computed(() => {
@@ -96,7 +101,7 @@ const createPost = () => {
     courseName: newPost.value.courseName,
     showAllComments: false,
     author: {
-      name: authStore.currentUser?.first_name || 'Гость',
+      name: userName.value,
       avatar: authStore.currentUser?.avatar || 'https://via.placeholder.com/40'
     }
   })
@@ -522,7 +527,7 @@ const toggleComments = (post: any) => {
             <div class="flex items-start space-x-3 pt-2">
               <img 
                 :src="authStore.currentUser?.avatar || 'https://via.placeholder.com/40'" 
-                :alt="authStore.currentUser?.name || 'Гость'"
+                :alt="userName"
                 class="w-8 h-8 rounded-full object-cover flex-shrink-0"
               />
               <div class="flex-1 min-w-0">

@@ -1,73 +1,107 @@
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type { CourseProgress } from '@/api/types'
-import { ProgressService } from '@/api/services/progress'
-
-const props = defineProps<{
-  courseId: string
-}>()
-
-const progressService = new ProgressService()
-const loading = ref(false)
-const error = ref<string | null>(null)
-const progress = ref<CourseProgress | null>(null)
-
-const loadProgress = async () => {
-  try {
-    loading.value = true
-    error.value = null
-    const response = await progressService.getCourseProgress(props.courseId)
-    progress.value = response.data
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке прогресса'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(loadProgress)
-</script>
-
 <template>
-  <div class="bg-white rounded-xl shadow-sm p-6">
-    <div v-if="loading" class="flex justify-center">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-    </div>
-
-    <div v-else-if="error" class="text-center text-red-600">
-      {{ error }}
-    </div>
-
-    <div v-else-if="progress" class="space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-gray-900">
-          Прогресс курса
-        </h3>
-        <span class="text-primary font-medium">
-          {{ progress.percentage }}%
-        </span>
-      </div>
-
-      <!-- Прогресс-бар -->
-      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          class="h-full bg-primary transition-all duration-300"
-          :style="{ width: `${progress.percentage}%` }"
-        />
-      </div>
-
-      <div class="flex justify-between text-sm text-gray-600">
-        <span>{{ progress.completed_lessons }} из {{ progress.total_lessons }} уроков</span>
-        <span>{{ progress.xp_earned }} XP заработано</span>
-      </div>
-
-      <div v-if="progress.completed_at" class="text-sm text-gray-600">
-        Курс завершен: {{ new Date(progress.completed_at).toLocaleDateString('ru-RU') }}
+  <div class="course-progress-container">
+    <div class="progress-header">
+      <h3 class="text-lg font-semibold mb-2">Прогресс курса</h3>
+      <div class="progress-stats">
+        <span>{{ progress.completed_lessons }} / {{ progress.total_lessons }} уроков</span>
       </div>
     </div>
-
-    <div v-else class="text-center text-gray-600">
-      Нет данных о прогрессе
+    
+    <div class="progress-bar-container">
+      <div class="progress-bar" :style="{ width: `${progress.progress_percent}%` }"></div>
+    </div>
+    
+    <div class="progress-footer">
+      <div class="progress-percent">{{ progress.progress_percent }}% завершено</div>
+      <div v-if="progress.completed" class="completed-badge">
+        Курс завершен
+      </div>
     </div>
   </div>
-</template> 
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed, PropType } from 'vue'
+import type { CourseProgress as ProgressType } from '@/api/types'
+import { progressService } from '@/api/services'
+
+const props = defineProps({
+  courseId: {
+    type: String,
+    required: true
+  }
+})
+
+const progress = ref<ProgressType>({
+  course_id: props.courseId,
+  completed_lessons: 0,
+  total_lessons: 0,
+  progress_percent: 0,
+  last_activity: '',
+  completed: false
+})
+
+const isLoading = ref(false)
+const error = ref<string | null>(null)
+
+// Загрузка прогресса курса
+onMounted(async () => {
+  try {
+    isLoading.value = true
+    const response = await progressService.getCourseProgress(props.courseId)
+    if (response.data) {
+      progress.value = response.data
+    }
+  } catch (err: any) {
+    error.value = err.message || 'Ошибка при загрузке прогресса'
+    console.error('Failed to load course progress:', err)
+  } finally {
+    isLoading.value = false
+  }
+})
+</script>
+
+<style scoped>
+.course-progress-container {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.progress-bar-container {
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #4f46e5;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.completed-badge {
+  background-color: #10b981;
+  color: white;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+</style> 

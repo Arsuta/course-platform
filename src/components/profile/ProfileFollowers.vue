@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
 import type { User } from '@/types/user'
-import type { APIResponse } from '@/api/base'
+import type { ApiResponse } from '@/types/api'
 
 const route = useRoute()
 const profileStore = useProfileStore()
@@ -36,7 +36,7 @@ const fetchFollowers = async () => {
       )
       
       const followerResponses = await Promise.all(followerPromises)
-      followers.value = followerResponses.map((response: APIResponse<User>) => response.data)
+      followers.value = followerResponses.map((response: ApiResponse<User>) => response.data)
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ошибка при загрузке подписчиков'

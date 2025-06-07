@@ -1,30 +1,76 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { courses, courseProgress } from '@/mocks/courses'
-import type { Module, CourseProgress } from '@/types/course'
+import { useCourseStore } from '@/stores/courses'
+import { useAuthStore } from '@/stores/auth'
+import type { Course, CourseProgress, Module, CourseCategory } from '@/types/course'
+import { formatPrice, formatDuration } from '@/utils/formatters'
 
 const route = useRoute()
+const courseStore = useCourseStore()
+const authStore = useAuthStore()
 
-const course = computed(() => {
-  return courses.find(c => c.id === route.params.id)
+const courseProgress: Record<string, CourseProgress> = {
+  '1': {
+    course_id: '1',
+    completed_lessons: 5,
+    total_lessons: 10,
+    percentage: 50,
+    xp_earned: 100,
+    completed_at: null,
+    progress: 50,
+    lastAccessAt: new Date().toISOString()
+  }
+}
+
+const categoryToType: Record<string, CourseCategory> = {
+  '1': 'programming',
+  '2': 'design',
+  '3': 'marketing',
+  '4': 'business'
+}
+
+const course = ref<Course>({
+  id: '1',
+  title: 'Основы программирования',
+  description: 'Научитесь основам программирования с нуля',
+  thumbnail: '/images/courses/programming.jpg',
+  price: 0,
+  duration: 120,
+  level: 'beginner',
+  rating: 4.5,
+  students_count: 100,
+  category_id: 'programming',
+  created_by: '1',
+  status: 'published',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  author: {
+    id: 1,
+    name: 'John Doe',
+    avatar: '/images/avatar.jpg',
+    description: 'Course Author'
+  },
+  modules: [
+    {
+      id: '1',
+      title: 'Module 1',
+      description: 'First Module',
+      lessons: [],
+      order: 1
+    }
+  ],
+  requirements: ['Requirement 1', 'Requirement 2'],
+  skills: ['Skill 1', 'Skill 2'],
+  isFree: false,
+  isEnrolled: false
 })
 
 const progress = computed(() => {
-  const progressMap = courseProgress as Record<string, CourseProgress>
-  return progressMap[route.params.id as string] || null
+  return courseProgress[route.params.id as string] || null
 })
 
 const selectedModule = ref<Module | null>(null)
-
-const formatDuration = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60)
-  return `${hours} ч ${minutes % 60} мин`
-}
-
-const formatPrice = (price: number): string => {
-  return price.toLocaleString('ru-RU') + ' ₽'
-}
 
 const enrollInCourse = () => {
   // TODO: Реализовать запись на курс
@@ -39,7 +85,7 @@ const enrollInCourse = () => {
       <div class="lg:col-span-2 space-y-6">
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
           <img
-            :src="course.image"
+            :src="course.thumbnail"
             :alt="course.title"
             class="w-full h-64 object-cover"
           />
@@ -163,7 +209,7 @@ const enrollInCourse = () => {
                       </span>
                       <span class="text-sm text-gray-900">{{ lesson.title }}</span>
                     </div>
-                    <span class="text-sm text-gray-500">{{ formatDuration(lesson.duration) }}</span>
+                    <span class="text-sm text-gray-500">{{ lesson.duration ? formatDuration(lesson.duration) : 'Длительность не указана' }}</span>
                   </div>
                 </div>
               </div>
@@ -235,7 +281,7 @@ const enrollInCourse = () => {
                   />
                 </div>
                 <p class="text-xs text-gray-500">
-                  Последний просмотр: {{ new Date(progress.lastAccessAt).toLocaleDateString('ru-RU') }}
+                  Последний просмотр: {{ progress.lastAccessAt ? new Date(progress.lastAccessAt).toLocaleDateString('ru-RU') : 'Нет данных' }}
                 </p>
               </div>
 

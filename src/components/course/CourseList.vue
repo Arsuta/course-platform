@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { Course } from '@/types/course'
+import type { Course, CategoryId } from '@/types/course'
 import { COURSE_CONSTANTS } from '@/constants/course'
 import CourseCard from './CourseCard.vue'
 import { useCourseStore } from '@/stores/courses'
@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 
 const searchQuery = ref('')
-const selectedCategory = ref<string>(COURSE_CONSTANTS.CATEGORIES.ALL)
+const selectedCategory = ref<CategoryId | 'all'>('all')
 const selectedLevel = ref<string>(COURSE_CONSTANTS.LEVELS.ALL)
 
 const courseStore = useCourseStore()
@@ -43,8 +43,8 @@ const filteredCourses = computed(() => {
   return (props.courses || []).filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = selectedCategory.value === COURSE_CONSTANTS.CATEGORIES.ALL || 
-                          course.category === selectedCategory.value
+    const matchesCategory = selectedCategory.value === 'all' || 
+                          course.category?.id === selectedCategory.value
     const matchesLevel = selectedLevel.value === COURSE_CONSTANTS.LEVELS.ALL || 
                         course.level === selectedLevel.value
     return matchesSearch && matchesCategory && matchesLevel
@@ -75,7 +75,7 @@ const handleEnroll = async (courseId: string) => {
         v-model="searchQuery"
         type="text"
         placeholder="Поиск курсов..."
-        class="flex-1 min-w-[100px] px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        class="flex-1 min-w-[200px] px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
       />
       
       <select
@@ -101,18 +101,13 @@ const handleEnroll = async (courseId: string) => {
     </div>
 
     <!-- Список курсов -->
-    <ul class="space-y-4">
-      <li
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <CourseCard
         v-for="course in filteredCourses"
         :key="course.id"
-        class="bg-white rounded-lg shadow-md p-4 flex flex-col"
-      >
-        <CourseCard
-          :course="course"
-          @enroll="handleEnroll"
-        />
-      </li>
-    </ul>
+        :course="course"
+      />
+    </div>
 
     <!-- Сообщение, если курсы не найдены -->
     <div

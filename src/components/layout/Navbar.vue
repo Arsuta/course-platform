@@ -8,17 +8,20 @@ import {
   InformationCircleIcon,
   Bars3Icon,
   UserIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  CogIcon
 } from '@heroicons/vue/24/outline'
 import { RouterLink } from 'vue-router'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-const props = defineProps<{
+// Переменная isCollapsed из props
+const { isCollapsed } = defineProps<{
   isCollapsed: boolean
 }>()
 
+// Определяем emit событие toggle
 const emit = defineEmits<{
   toggle: []
 }>()
@@ -36,14 +39,17 @@ const navItems = computed(() => {
       { title: 'Курсы', path: '/courses', icon: AcademicCapIcon },
       { 
         title: 'Профиль', 
-        path: `/profile/${authStore.currentUser?.id}`, 
+        path: `/profile/${authStore.user?.id}`, 
         icon: UserIcon 
-      }
+      },
+      { title: 'Настройки', path: '/settings', icon: CogIcon },
     ]
   } else {
     return [
       ...baseItems,
-      { title: 'Каталог курсов', path: '/courses/preview', icon: AcademicCapIcon }
+      { title: 'Каталог курсов', path: '/courses/preview', icon: AcademicCapIcon },
+      { title: 'Войти', path: '/login' },
+      { title: 'Регистрация', path: '/register', variant: 'primary' },
     ]
   }
 })
@@ -83,6 +89,7 @@ const handleAuthAction = () => {
         @click.stop
       >
         <component 
+          v-if="'icon' in item"
           :is="item.icon" 
           class="h-5 w-5 flex-shrink-0"
           :class="{ 'ml-2': isCollapsed }"

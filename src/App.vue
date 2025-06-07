@@ -3,9 +3,12 @@ import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+console.log('App компонент загружен')
+
 const authStore = useAuthStore()
 
 onMounted(() => {
+  console.log('App: onMounted - Инициализация аутентификации')
   authStore.initAuth()
 })
 </script>
@@ -14,17 +17,13 @@ onMounted(() => {
   <RouterView />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+<style>
+.debug-container {
+  padding: 20px;
+  margin: 20px;
+  background-color: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  text-align: center;
 }
 </style>

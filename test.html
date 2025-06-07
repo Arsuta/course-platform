@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест Vue</title>
+  <script src="https://unpkg.com/vue@3"></script>
+</head>
+<body>
+  <div id="app">
+    <h1>{{ message }}</h1>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    
+    createApp({
+      data() {
+        return {
+          message: 'Привет, Vue работает!'
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html> 

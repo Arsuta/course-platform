@@ -4,8 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useAuthStore } from '@/stores/auth'
 import { useCourseStore } from '@/stores/courses'
-import type { Course, Lesson, Module } from '@/types/course'
-import { COURSE_CONSTANTS } from '@/constants/course'
+import type { Course } from '@/api/types'
+import type { Lesson, Module } from '@/types/course'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,18 +81,26 @@ const getCategoryGradient = (categoryId: string): string => {
   return categoryType ? courseGradients[categoryType] : defaultGradient
 }
 
+// Получение уроков курса
+const getCourseLessons = async (courseId: string): Promise<Lesson[]> => {
+  try {
+    // Здесь должен быть запрос к API за уроками курса
+    // Пока возвращаем пустой массив
+    return []
+  } catch (e) {
+    console.error('Ошибка при загрузке уроков:', e)
+    return []
+  }
+}
+
 onMounted(async () => {
   try {
     loading.value = true
     const courseId = route.params.id as string
     const response = await courseStore.fetchCourseById(courseId)
-    course.value = response.data
-    if (course.value?.modules?.length) {
-      selectedModule.value = course.value.modules[0]
-    }
-
-    const lessonsResponse = await courseStore.getCourseLessons(courseId)
-    lessons.value = lessonsResponse.data
+    course.value = response
+    
+    lessons.value = await getCourseLessons(courseId)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курса'
   } finally {
@@ -137,9 +145,9 @@ const handleEnroll = async () => {
         <div class="flex items-center space-x-4 text-gray-600">
           <span>{{ formatDuration(course.duration) }}</span>
           <span>•</span>
-          <span>{{ getLevelLabel(course.level) }}</span>
+          <span>{{ getLevelLabel(course.status) }}</span>
           <span>•</span>
-          <span>{{ course.students_count }} студентов</span>
+          <span>{{ course.lessons_count }} уроков</span>
         </div>
       </div>
       
@@ -198,13 +206,13 @@ const handleEnroll = async () => {
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>{{ getLevelLabel(course.level) }}</span>
+                <span>{{ getLevelLabel(course.status) }}</span>
             </div>
               <div class="flex items-center space-x-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                <span>{{ course.students_count }} студентов</span>
+                <span>{{ course.lessons_count }} уроков</span>
             </div>
             </div>
           </div>

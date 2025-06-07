@@ -1,7 +1,8 @@
 import type { CourseGradient as GradientType } from '@/constants/gradients'
-import type { CourseCategory, CourseLevel } from '@/constants/course'
+import type { CourseCategory as _CourseCategory, CourseLevel } from '@/constants/course'
 
 export type CourseGradient = GradientType
+export type CourseCategory = _CourseCategory
 
 export interface Author {
   id: number
@@ -13,13 +14,21 @@ export interface Author {
 export interface Lesson {
   id: string
   title: string
-  description: string
-  duration: number
-  type: 'video' | 'text' | 'quiz'
   content: string
-  order: number
+  course_id: string
+  order_num: number
+  has_test: boolean
+  requires_test: boolean
+  completed: boolean
+  passed_test: boolean
+  test_score: number
+  viewed_at: string | null
+  created_at: string
+  updated_at: string
   isCompleted?: boolean
   videoUrl?: string
+  duration?: number
+  order?: number
 }
 
 export interface Module {
@@ -31,27 +40,37 @@ export interface Module {
   isCompleted?: boolean
 }
 
+export type CategoryId = 'programming' | 'design' | 'marketing' | 'business'
+
+export interface Category {
+  id: CategoryId
+  name: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Course {
   id: string
   title: string
   description: string
+  thumbnail: string
   price: number
   duration: number
-  level: CourseLevel
+  level: string
   rating: number
-  thumbnail: string
-  category_id: string
-  category: CourseCategory
+  students_count: number
+  category_id: CategoryId
   created_by: string
   status: string
-  students_count: number
   created_at: string
   updated_at: string
-  image?: string
-  gradient?: CourseGradient
+  category?: Category
   modules?: Module[]
-  isEnrolled?: boolean
   author?: Author
+  image?: string
+  gradient?: string
+  isEnrolled?: boolean
   isFree?: boolean
   requirements?: string[]
   skills?: string[]
@@ -64,14 +83,50 @@ export interface CourseResponse {
   pageSize: number
 }
 
-export interface CourseProgress {
-  courseId: number
-  userId: number
+export interface CourseStructure {
+  course: Course
+  lessons: Lesson[]
+  completed_lessons: number
+  total_lessons: number
   progress: number
-  completedLessons: number[]
-  lastViewedLesson?: number
-  startedAt: string
-  lastAccessAt: string
+}
+
+export interface Test {
+  id: string
+  lesson_id: string
+  passing_score: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Question {
+  id: string
+  test_id: string
+  question_text: string
+  options: string[]
+  correct_answer: number
+  created_at: string
+  updated_at: string
+}
+
+export interface TestResponse {
+  test: Test
+  questions: Question[]
+  passing_score: number
+  attempts_count: number
+  last_score: number
+  passed: boolean
+}
+
+export interface CourseProgress {
+  course_id: string
+  completed_lessons: number
+  total_lessons: number
+  percentage: number
+  xp_earned: number
+  completed_at: string | null
+  progress?: number
+  lastAccessAt?: string
 }
 
 export interface PaginationQuery {
@@ -87,10 +142,4 @@ export interface PaginatedResponse<T> {
   page: number
   per_page: number
   total_pages: number
-}
-
-export interface APIResponse<T> {
-  data: T
-  status: number
-  message?: string
 }

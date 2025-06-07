@@ -4,13 +4,14 @@ import CourseList from '@/components/course/CourseList.vue'
 import CourseDetail from '@/components/course/CourseDetail.vue'
 import LessonView from '@/components/course/LessonView.vue'
 
-export const courseRoutes = {
+// Основной маршрут для вложенных путей /courses
+export const courseRoutes: RouteRecordRaw = {
   path: '/courses',
   component: CourseLayout,
   children: [
     {
       path: '',
-      name: 'courses',
+      name: 'courses-list',
       component: CourseList,
       meta: {
         title: 'Курсы',
@@ -19,7 +20,7 @@ export const courseRoutes = {
     },
     {
       path: ':id',
-      name: 'course-detail',
+      name: 'course-detail-nested',
       component: CourseDetail,
       meta: {
         title: 'Детали курса',
@@ -29,19 +30,10 @@ export const courseRoutes = {
   ]
 }
 
+// Маршруты для отдельных страниц курсов
 export const coursesRoutes: RouteRecordRaw[] = [
   {
-    path: '/courses/:id',
-    name: 'course-detail',
-    component: CourseDetail,
-    props: true,
-    meta: {
-      title: 'Детали курса',
-      requiresAuth: false
-    }
-  },
-  {
-    path: '/courses/:courseId/learn/:lessonId',
+    path: 'courses/:courseId/learn/:lessonId',
     name: 'lesson-view',
     component: LessonView,
     props: true,

@@ -1,3 +1,5 @@
+import type { CategoryId } from '@/types/course'
+
 export const COURSE_CONSTANTS = {
   AUTOPLAY_DELAY: 8000,
   LEVELS: {
@@ -12,7 +14,7 @@ export const COURSE_CONSTANTS = {
     DESIGN: 'design',
     MARKETING: 'marketing',
     BUSINESS: 'business'
-  },
+  } as const,
   LEVEL_LABELS: {
     beginner: 'Начинающий',
     intermediate: 'Средний',
@@ -23,8 +25,8 @@ export const COURSE_CONSTANTS = {
     design: 'Дизайн',
     marketing: 'Маркетинг',
     business: 'Бизнес'
-  }
+  } as const
 } as const
 
-export type CourseCategory = keyof typeof COURSE_CONSTANTS.CATEGORY_LABELS
-export type CourseLevel = keyof typeof COURSE_CONSTANTS.LEVEL_LABELS 
+export type CourseLevel = keyof typeof COURSE_CONSTANTS.LEVEL_LABELS
+export type CourseCategory = CategoryId 

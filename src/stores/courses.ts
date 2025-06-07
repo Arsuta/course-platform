@@ -1,147 +1,132 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { api } from '@/api'
-import type { Course, PaginationQuery, PaginatedResponse, Lesson, APIResponse } from '@/types/course'
+import { ref, computed } from 'vue'
+import { coursesService } from '@/api/services'
+import type { Course } from '@/api/types'
 
 export const useCourseStore = defineStore('courses', () => {
-  const popularCourses = ref<Course[]>([])
-  const coursesByCategory = ref<Course[]>([])
-  const searchResults = ref<Course[]>([])
   const courses = ref<Course[]>([])
-  const loading = ref(false)
+  const popularCourses = ref<Course[]>([])
+  const currentCourse = ref<Course | null>(null)
+  const enrolledCourses = ref<Course[]>([])
+  const isLoading = ref(false)
   const error = ref<string | null>(null)
-
-  const fetchPopularCourses = async () => {
+  
+  // Загрузить все курсы
+  async function fetchCourses(params?: { page?: number; limit?: number; category_id?: string }) {
     try {
-      loading.value = true
+      isLoading.value = true
       error.value = null
-      const response = await api.courses.getAllCourses({ 
-        page: 1, 
-        per_page: 10,
-        sort_by: 'rating',
-        order: 'desc'
-      })
-      popularCourses.value = response.data.data
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курсов'
-      console.error('Error fetching popular courses:', e)
+      
+      // Если передан category_id, используем метод getCoursesByCategory
+      if (params?.category_id) {
+        const categoryId = params.category_id
+        const { page, limit } = params
+        const response = await coursesService.getCoursesByCategory(categoryId, { page, limit })
+        courses.value = response.data || []
+        return courses.value
+      } else {
+        // Иначе получаем все курсы
+        const response = await coursesService.getCourses(params)
+        courses.value = response.data || []
+        return courses.value
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Ошибка при загрузке курсов'
+      return []
     } finally {
-      loading.value = false
+      isLoading.value = false
     }
   }
-
-  const fetchCoursesByCategory = async (categoryId: string) => {
+  
+  // Загрузить популярные курсы
+  async function fetchPopularCourses(limit = 6) {
     try {
-      loading.value = true
+      isLoading.value = true
       error.value = null
-      const response = await api.courses.getCoursesByCategory(categoryId, {
-        page: 1,
-        per_page: 10
-      })
-      coursesByCategory.value = response.data.data
-      courses.value = response.data.data
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курсов'
-      console.error('Error fetching courses by category:', e)
+      
+      const response = await coursesService.getCourses({ limit })
+      popularCourses.value = response.data || []
+      return popularCourses.value
+    } catch (err: any) {
+      error.value = err.message || 'Ошибка при загрузке популярных курсов'
+      return []
     } finally {
-      loading.value = false
+      isLoading.value = false
     }
   }
-
-  const fetchCourseById = async (courseId: string) => {
+  
+  // Загрузить детали курса
+  async function fetchCourseById(id: string) {
     try {
-      loading.value = true
+      isLoading.value = true
       error.value = null
-      const response = await api.courses.getCourseById(courseId)
-      return response
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курса'
-      throw e
+      
+      const response = await coursesService.getCourse(id)
+      currentCourse.value = response.data || null
+      return currentCourse.value
+    } catch (err: any) {
+      error.value = err.message || 'Ошибка при загрузке курса'
+      return null
     } finally {
-      loading.value = false
+      isLoading.value = false
     }
   }
-
-  const searchCourses = async (query: string) => {
+  
+  // Купить курс
+  async function purchaseCourse(courseId: string) {
     try {
-      loading.value = true
+      isLoading.value = true
       error.value = null
-      const response = await api.courses.searchCourses(query, {
-        page: 1,
-        per_page: 10
-      })
-      searchResults.value = response.data.data
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при поиске курсов'
-      console.error('Error searching courses:', e)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const enrollCourse = async (courseId: string): Promise<boolean> => {
-    try {
-      loading.value = true
-      error.value = null
-      await api.courses.purchaseCourse(courseId)
-      return true
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при записи на курс'
-      console.error('Error enrolling in course:', e)
+      
+      const response = await coursesService.purchaseCourse(courseId)
+      
+      if (response.success) {
+        // После успешной покупки можно получить обновленный список курсов
+        await fetchEnrolledCourses()
+        return true
+      }
+      
+      return false
+    } catch (err: any) {
+      error.value = err.message || 'Ошибка при покупке курса'
       return false
     } finally {
-      loading.value = false
+      isLoading.value = false
     }
   }
-
-  const fetchCourses = async () => {
+  
+  // Загрузить купленные курсы через profileService
+  async function fetchEnrolledCourses() {
     try {
-      loading.value = true
+      isLoading.value = true
       error.value = null
-      const response = await api.courses.getAllCourses({ 
-        page: 1, 
-        per_page: 10
-      })
-      courses.value = response.data.data
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курсов'
-      console.error('Error fetching courses:', e)
+      
+      // Используем profileService для получения купленных курсов
+      // Этот метод должен быть реализован в profileStore
+      const { profileService } = await import('@/api/services')
+      const response = await profileService.getEnrolledCourses()
+      
+      enrolledCourses.value = response.data || []
+      return enrolledCourses.value
+    } catch (err: any) {
+      error.value = err.message || 'Ошибка при загрузке купленных курсов'
+      return []
     } finally {
-      loading.value = false
+      isLoading.value = false
     }
   }
-
-  const getCourseLessons = async (courseId: string): Promise<APIResponse<Lesson[]>> => {
-    try {
-      loading.value = true
-      error.value = null
-      const response = await api.courses.getCourseLessons(courseId)
-      return {
-        data: response.data as unknown as Lesson[],
-        status: response.status,
-        message: response.message
-      }
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке уроков'
-      throw error.value
-    } finally {
-      loading.value = false
-    }
-  }
-
+  
   return {
-    popularCourses,
-    coursesByCategory,
-    searchResults,
     courses,
-    loading,
+    popularCourses,
+    currentCourse,
+    enrolledCourses,
+    isLoading,
     error,
-    fetchPopularCourses,
-    fetchCoursesByCategory,
-    fetchCourseById,
-    searchCourses,
-    enrollCourse,
     fetchCourses,
-    getCourseLessons
+    fetchPopularCourses,
+    fetchCourseById,
+    fetchEnrolledCourses,
+    purchaseCourse
   }
 }) 

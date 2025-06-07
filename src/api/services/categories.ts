@@ -1,9 +1,21 @@
-import { BaseAPI, APIResponse } from '../base'
-import { CATEGORIES } from '../endpoints'
-import type { Category } from '../types'
+import { BaseApiService } from '../base';
+import type { ApiResponse, Category } from '../types';
 
-export class CategoryService extends BaseAPI {
-  async getAllCategories(): Promise<APIResponse<Category[]>> {
-    return this.get(CATEGORIES.LIST)
+/**
+ * Сервис для работы с категориями
+ */
+export class CategoriesService extends BaseApiService {
+  /**
+   * Получить список всех категорий
+   */
+  async getCategories(): Promise<ApiResponse<Category[]>> {
+    return this.get<Category[]>('/categories');
+  }
+
+  /**
+   * Получение категории по ID
+   */
+  async getCategoryById(id: string): Promise<ApiResponse<Category>> {
+    return this.get<Category>(API_CATEGORIES.DETAILS(id));
   }
 } 

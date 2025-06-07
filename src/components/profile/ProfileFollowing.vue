@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
 import type { User } from '@/types/user'
-import type { APIResponse } from '@/api/base'
+import type { ApiResponse } from '@/types/api'
 
 const route = useRoute()
 const profileStore = useProfileStore()
@@ -36,7 +36,7 @@ const fetchFollowing = async () => {
       )
       
       const followingResponses = await Promise.all(followingPromises)
-      following.value = followingResponses.map((response: APIResponse<User>) => response.data)
+      following.value = followingResponses.map((response: ApiResponse<User>) => response.data)
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ошибка при загрузке подписок'
@@ -50,11 +50,6 @@ const handlePageChange = (page: number) => {
   const start = (page - 1) * perPage.value
   const end = start + perPage.value
   following.value = following.value.slice(start, end)
-}
-
-const isFollowing = (userId: string): boolean => {
-  const currentUser = profileStore.user
-  return currentUser?.following?.includes(userId) || false
 }
 
 onMounted(() => {

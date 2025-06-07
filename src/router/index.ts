@@ -1,8 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { coursesRoutes } from './courses'
+import { courseRoutes } from './courses'
 import { useAuthStore } from '@/stores/auth'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import HomeView from '@/views/Home.vue'
+
+// Отладочные логи
+console.log('Инициализация роутера')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,11 +25,11 @@ const router = createRouter({
         },
         {
           path: 'courses',
-          name: 'courses',
+          name: 'courses-main',
           component: () => import('@/views/Courses.vue'),
           meta: { 
             title: 'Курсы',
-            requiresAuth: true 
+            requiresAuth: false 
           }
         },
         {
@@ -38,7 +41,8 @@ const router = createRouter({
             public: true 
           }
         },
-        ...coursesRoutes,
+        // Добавляем вложенные маршруты для курсов
+        courseRoutes,
         {
           path: 'about',
           name: 'about',
@@ -88,6 +92,24 @@ const router = createRouter({
           }
         },
         {
+          path: 'verify',
+          name: 'verify',
+          component: () => import('@/views/auth/Verification.vue'),
+          meta: { 
+            title: 'Подтверждение',
+            public: true 
+          },
+          beforeEnter: (to, from, next) => {
+            const { type, id } = to.query
+            if (!type || !id) {
+              console.error('Отсутствуют необходимые параметры type или id для верификации')
+              next('/auth/login')
+            } else {
+              next()
+            }
+          }
+        },
+        {
           path: 'register',
           name: 'register',
           component: () => import('@/views/auth/Register.vue'),
@@ -107,10 +129,22 @@ const router = createRouter({
         }
       ]
     },
+    // Маршрут 404 для всех неизвестных URL
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFound.vue'),
+      meta: {
+        title: 'Страница не найдена',
+        public: true
+      }
+    }
   ]
 })
 
 router.beforeEach((to, from, next) => {
+  console.log('Router navigation:', { to: to.fullPath, from: from.fullPath })
+  
   const authStore = useAuthStore()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const isPublic = to.matched.some(record => record.meta.public)
@@ -120,6 +154,7 @@ router.beforeEach((to, from, next) => {
 
   // Если страница требует авторизации и пользователь не авторизован
   if (requiresAuth && !authStore.isAuthenticated) {
+    console.log('Требуется авторизация, перенаправление на логин')
     next({ 
       name: 'login', 
       query: { redirect: to.fullPath },
@@ -128,10 +163,12 @@ router.beforeEach((to, from, next) => {
   } 
   // Если страница требует гостя и пользователь авторизован
   else if (to.matched.some(record => record.meta.requiresGuest) && authStore.isAuthenticated) {
+    console.log('Пользователь авторизован, перенаправление на главную')
     next({ name: 'home' })
   }
   // В остальных случаях разрешаем доступ
   else {
+    console.log('Доступ разрешен')
     next()
   }
 })

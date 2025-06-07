@@ -11,7 +11,7 @@ import ProfileFollowers from '@/components/profile/ProfileFollowers.vue'
 import ProfileFollowing from '@/components/profile/ProfileFollowing.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/user'
-import type { APIResponse } from '@/api/base'
+import type { ApiResponse } from '@/api/types'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -25,9 +25,29 @@ const fetchUser = async () => {
   try {
     loading.value = true
     error.value = null
+    
+    // Если id не указан или равен undefined, используем текущего пользователя
     const userId = route.params.id as string
-    const response = await authStore.getUserById(userId)
-    profileUser.value = (response as any).data || response as User
+    
+    if (!userId || userId === 'undefined') {
+      console.log('ID не указан, используем профиль текущего пользователя')
+      // Используем данные текущего пользователя из authStore
+      profileUser.value = authStore.currentUser as User
+      
+      // Если данных пользователя нет, загрузим их
+      if (!profileUser.value) {
+        const currentUserData = await authStore.loadUserProfile()
+        profileUser.value = currentUserData as User
+      }
+    } else {
+      console.log(`Загрузка профиля пользователя с ID: ${userId}`)
+      const response = await authStore.getUserById(userId)
+      profileUser.value = (response as any).data || response as User
+    }
+    
+    if (!profileUser.value) {
+      throw new Error('Не удалось загрузить данные пользователя')
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ошибка при загрузке пользователя'
     profileUser.value = null

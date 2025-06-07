@@ -98,4 +98,10 @@ export interface PaginatedResponse<T> {
 export interface PaginationQuery {
   page?: number
   limit?: number
+}
+
+export interface ApiResponse<T> {
+  data: T
+  status: number
+  message?: string
 } 

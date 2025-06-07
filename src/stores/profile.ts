@@ -1,58 +1,64 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api } from '@/api'
-import type { User } from '@/types/user'
-import type { APIResponse } from '@/api/base'
+import { profileService } from '@/api/services'
+import type { UserProfile } from '@/api/types'
 
 export const useProfileStore = defineStore('profile', () => {
-  const user = ref<User | null>(null)
+  const user = ref<UserProfile | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const getUserById = async (userId: string): Promise<APIResponse<User>> => {
+  const getProfile = async (): Promise<UserProfile | null> => {
     try {
       loading.value = true
       error.value = null
-      return await api.profile.getUserById(userId)
+      const response = await profileService.getProfile()
+      user.value = response
+      return response
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Ошибка при загрузке профиля'
-      throw e
+      return null
     } finally {
       loading.value = false
     }
   }
 
-  const followUser = async (userId: string): Promise<void> => {
+  const updateProfile = async (profileData: Partial<UserProfile>): Promise<UserProfile | null> => {
     try {
       loading.value = true
       error.value = null
-      await api.profile.followUser(userId)
-      
-      // Обновляем текущего пользователя после подписки
-      if (user.value) {
-        user.value.following = [...(user.value.following || []), userId]
-      }
+      const response = await profileService.updateProfile(profileData)
+      user.value = response
+      return response
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при подписке'
-      throw e
+      error.value = e instanceof Error ? e.message : 'Ошибка при обновлении профиля'
+      return null
     } finally {
       loading.value = false
     }
   }
 
-  const unfollowUser = async (userId: string): Promise<void> => {
+  const getEnrolledCourses = async () => {
     try {
       loading.value = true
       error.value = null
-      await api.profile.unfollowUser(userId)
-      
-      // Обновляем текущего пользователя после отписки
-      if (user.value?.following) {
-        user.value.following = user.value.following.filter(id => id !== userId)
-      }
+      return await profileService.getEnrolledCourses()
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Ошибка при отписке'
-      throw e
+      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке курсов'
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const getXp = async () => {
+    try {
+      loading.value = true
+      error.value = null
+      return await profileService.getXp()
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Ошибка при загрузке XP'
+      return 0
     } finally {
       loading.value = false
     }
@@ -62,8 +68,9 @@ export const useProfileStore = defineStore('profile', () => {
     user,
     loading,
     error,
-    getUserById,
-    followUser,
-    unfollowUser
+    getProfile,
+    updateProfile,
+    getEnrolledCourses,
+    getXp
   }
 }) 

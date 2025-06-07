@@ -1,187 +1,261 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import AuthLogo from '@/components/auth/AuthLogo.vue'
-import VerificationCode from '@/components/auth/VerificationCode.vue'
 import { useAuthStore } from '@/stores/auth'
+import type { AuthApiResponse } from '@/types/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
+// Форма регистрации
 const email = ref('')
 const password = ref('')
-const firstName = ref('')
-const lastName = ref('')
-const loading = ref(false)
-const error = ref<string | null>(null)
-const showVerification = ref(false)
+const confirmPassword = ref('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const isLoading = ref(false)
+const errorMessage = ref<string | null>(null)
+const serverError = ref<string | null>(null)
+const validationErrors = ref<Record<string, string>>({})
+const successMessage = ref<string | null>(null)
 
-const isVerifying = computed(() => authStore.isVerifying)
-const verificationEmail = computed(() => authStore.verificationEmail)
+// Store аутентификации
+const authStore = useAuthStore()
 
-const handleSubmit = async () => {
+// Валидация email
+const validateEmail = () => {
+  if (!email.value) {
+    validationErrors.value.email = 'Email обязателен'
+    return false
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    validationErrors.value.email = 'Некорректный формат email'
+    return false
+  }
+  validationErrors.value.email = ''
+  return true
+}
+
+// Валидация пароля
+const validatePassword = () => {
+  if (!password.value) {
+    validationErrors.value.password = 'Пароль обязателен'
+    return false
+  }
+  
+  if (password.value.length < 6) {
+    validationErrors.value.password = 'Пароль должен содержать минимум 6 символов'
+    return false
+  }
+  
+  validationErrors.value.password = ''
+  return true
+}
+
+// Валидация подтверждения пароля
+const validateConfirmPassword = () => {
+  if (!confirmPassword.value) {
+    validationErrors.value.confirmPassword = 'Подтвердите пароль'
+    return false
+  }
+  
+  if (confirmPassword.value !== password.value) {
+    validationErrors.value.confirmPassword = 'Пароли не совпадают'
+    return false
+  }
+  
+  validationErrors.value.confirmPassword = ''
+  return true
+}
+
+// Валидация формы
+const validateForm = () => {
+  const isEmailValid = validateEmail()
+  const isPasswordValid = validatePassword()
+  const isConfirmPasswordValid = validateConfirmPassword()
+  
+  return isEmailValid && isPasswordValid && isConfirmPasswordValid
+}
+
+// Обработка регистрации
+const handleRegister = async () => {
+  if (!validateForm()) return
+  
+  isLoading.value = true
+  errorMessage.value = null
+  serverError.value = null
+  successMessage.value = null
+  
   try {
-    loading.value = true
-    error.value = null
-    
-    await authStore.register({
+    console.log('Отправка запроса на регистрацию:', {
       email: email.value,
-      password: password.value,
-      first_name: firstName.value,
-      last_name: lastName.value
+      password: password.value
     })
     
-    showVerification.value = true
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Ошибка при регистрации'
+    const response = await authStore.register(
+      email.value, 
+      password.value,
+      'User', // Дефолтное имя
+      'User'  // Дефолтная фамилия
+    )
+    
+    console.log('Ответ от сервера:', response)
+    
+    // Показываем сообщение об успешной регистрации перед редиректом
+    successMessage.value = `Код подтверждения отправлен на ${email.value}. Проверьте вашу почту, включая папку "Спам".`
+    
+    // Получаем verification_id (реальный или сгенерированный)
+    const verificationId = response?.verification_id || btoa(email.value)
+    
+    console.log('ID для верификации:', verificationId)
+    
+    // Добавляем небольшую задержку перед переходом
+    setTimeout(() => {
+      console.log('Перенаправление на страницу верификации...')
+      router.push({
+        name: 'verify',
+        query: { 
+          type: 'register',
+          id: verificationId
+        }
+      })
+    }, 2000) // Увеличиваем задержку до 2 секунд, чтобы пользователь успел прочитать сообщение
+  } catch (err: any) {
+    console.error('Ошибка при регистрации:', err)
+    errorMessage.value = err.message || 'Произошла ошибка при регистрации'
+    serverError.value = errorMessage.value
+    successMessage.value = null
+    
+    // Если это ошибка существующего email
+    if (err.message && err.message.includes('email already exists')) {
+      serverError.value = 'Этот email уже зарегистрирован. Пожалуйста, воспользуйтесь формой входа или восстановления пароля.'
+    }
   } finally {
-    loading.value = false
+    isLoading.value = false
   }
-}
-
-const handleVerification = async (code: string) => {
-  try {
-    loading.value = true
-    error.value = null
-    await authStore.verifyEmail(code)
-    router.push('/login')
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Ошибка при подтверждении'
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleCancel = () => {
-  showVerification.value = false
-}
-
-const handleGoogleRegister = () => {
-  // Здесь будет логика регистрации через Google
-  console.log('Google register')
 }
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <VerificationCode
-      v-if="showVerification"
-      :email="verificationEmail!"
-      :is-loading="loading"
-      :error="error"
-      @submit="handleVerification"
-      @cancel="handleCancel"
-    />
-    
-    <div v-else class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg">
-      <div>
-        <AuthLogo />
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Создайте аккаунт
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-          Присоединяйтесь к нашему сообществу
-        </p>
-      </div>
-      
-      <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
-        <div class="rounded-md shadow-sm -space-y-px">
-          <div>
-            <label for="email-address" class="sr-only">Email</label>
-            <input
-              id="email-address"
-              v-model="email"
-              name="email"
-              type="email"
-              required
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-              placeholder="Email"
-            >
-          </div>
-          <div>
-            <label for="password" class="sr-only">Пароль</label>
-            <input
-              id="password"
-              v-model="password"
-              name="password"
-              type="password"
-              required
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-              placeholder="Пароль"
-            >
-          </div>
-          <div>
-            <label for="first-name" class="sr-only">Имя</label>
-            <input
-              id="first-name"
-              v-model="firstName"
-              name="first-name"
-              type="text"
-              required
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-              placeholder="Имя"
-            >
-          </div>
-          <div>
-            <label for="last-name" class="sr-only">Фамилия</label>
-            <input
-              id="last-name"
-              v-model="lastName"
-              name="last-name"
-              type="text"
-              required
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-              placeholder="Фамилия"
-            >
-          </div>
+  <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+        Создание аккаунта
+      </h2>
+    </div>
+
+    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-blue-50 p-6 sm:p-8 shadow rounded-lg">
+        <!-- Сообщение об ошибке -->
+        <div v-if="serverError" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <p class="text-sm text-red-700">{{ serverError }}</p>
+        </div>
+        
+        <!-- Сообщение об успехе -->
+        <div v-if="successMessage" class="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+          <p class="text-sm text-green-700">{{ successMessage }}</p>
         </div>
 
-        <div>
-          <button
-            type="submit"
-            :disabled="loading"
-            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-              <svg 
-                v-if="!loading"
-                class="h-5 w-5 text-primary-dark group-hover:text-primary-light" 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 20 20" 
-                fill="currentColor" 
-                aria-hidden="true"
+        <form @submit.prevent="handleRegister" class="space-y-6">
+          <!-- Email -->
+          <div>
+            <label for="email" class="block text-sm font-medium leading-6 text-gray-900">
+              Email
+            </label>
+            <div class="mt-2">
+              <input
+                id="email"
+                v-model="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                @blur="validateEmail"
+                class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                :class="{ 'ring-red-500': validationErrors.email }"
+              />
+              <p v-if="validationErrors.email" class="mt-2 text-sm text-red-600">
+                {{ validationErrors.email }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Пароль -->
+          <div>
+            <label for="password" class="block text-sm font-medium leading-6 text-gray-900">
+              Пароль
+            </label>
+            <div class="mt-2 relative">
+              <input
+                id="password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                name="password"
+                autocomplete="new-password"
+                required
+                @blur="validatePassword"
+                class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                :class="{ 'ring-red-500': validationErrors.password }"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
               >
-                <path 
-                  fill-rule="evenodd" 
-                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" 
-                  clip-rule="evenodd" 
-                />
-              </svg>
-              <svg 
-                v-else
-                class="animate-spin h-5 w-5 text-white" 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24"
+                <span v-if="showPassword">Скрыть</span>
+                <span v-else>Показать</span>
+              </button>
+              <p v-if="validationErrors.password" class="mt-2 text-sm text-red-600">
+                {{ validationErrors.password }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Подтверждение пароля -->
+          <div>
+            <label for="confirm-password" class="block text-sm font-medium leading-6 text-gray-900">
+              Подтверждение пароля
+            </label>
+            <div class="mt-2 relative">
+              <input
+                id="confirm-password"
+                v-model="confirmPassword"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                name="confirm-password"
+                autocomplete="new-password"
+                required
+                @blur="validateConfirmPassword"
+                class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6"
+                :class="{ 'ring-red-500': validationErrors.confirmPassword }"
+              />
+              <button
+                type="button"
+                @click="showConfirmPassword = !showConfirmPassword"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
               >
-                <circle 
-                  class="opacity-25" 
-                  cx="12" 
-                  cy="12" 
-                  r="10" 
-                  stroke="currentColor" 
-                  stroke-width="4"
-                />
-                <path 
-                  class="opacity-75" 
-                  fill="currentColor" 
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            </span>
-            {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
-          </button>
-        </div>
+                <span v-if="showConfirmPassword">Скрыть</span>
+                <span v-else>Показать</span>
+              </button>
+              <p v-if="validationErrors.confirmPassword" class="mt-2 text-sm text-red-600">
+                {{ validationErrors.confirmPassword }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Кнопка регистрации -->
+          <div>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="flex w-full justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <span v-if="isLoading" class="animate-spin mr-2">
+                ◌
+              </span>
+              <span>Зарегистрироваться</span>
+            </button>
+          </div>
+        </form>
 
         <div class="mt-6">
           <div class="relative">
@@ -189,46 +263,19 @@ const handleGoogleRegister = () => {
               <div class="w-full border-t border-gray-300"></div>
             </div>
             <div class="relative flex justify-center text-sm">
-              <span class="px-2 bg-white text-gray-500">
-                Или зарегистрируйтесь через
-              </span>
+              <span class="bg-white px-2 text-gray-500">Уже есть аккаунт?</span>
             </div>
           </div>
-
           <div class="mt-6">
             <button
               type="button"
-              @click="handleGoogleRegister"
-              class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              @click="router.push('/auth/login')"
+              class="flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-primary shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             >
-              <img 
-                class="h-5 w-5 mr-2" 
-                src="https://www.svgrepo.com/show/475656/google-color.svg" 
-                alt="Google logo"
-              >
-              Google
+              Войти
             </button>
           </div>
         </div>
-      </form>
-
-      <div class="text-center mt-4">
-        <p class="text-sm text-gray-600">
-          Уже есть аккаунт?
-          <router-link 
-            to="/auth/login" 
-            class="font-medium text-primary hover:text-primary-dark"
-          >
-            Войти
-          </router-link>
-        </p>
-      </div>
-
-      <div 
-        v-if="error"
-        class="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm"
-      >
-        {{ error }}
       </div>
     </div>
   </div>

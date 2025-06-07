@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/user'
-import type { APIResponse } from '@/api/base'
+import { defineComponent } from 'vue'
 
 const route = useRoute()
 const authStore = useAuthStore()

@@ -1,39 +1,63 @@
-import { BaseAPI } from '../base'
-import type { User } from '@/types/user'
-import type { APIResponse } from '../base'
-import { PROFILE } from '../endpoints'
-import type { UserProfile, Course } from '../types'
+import { BaseApiService } from '../base';
+import { eduClient } from '../client';
+import type { ApiResponse, UserProfile, Course } from '../types';
+import { API_PROFILE } from '../constants';
 
-export class ProfileService extends BaseAPI {
-  async getProfile(): Promise<APIResponse<User>> {
-    return this.get<User>(PROFILE.ME)
+/**
+ * Сервис для работы с профилем пользователя
+ */
+export class ProfileService extends BaseApiService {
+  constructor() {
+    super(eduClient); // Используем eduClient для запросов к образовательному API
   }
 
-  async updateProfile(data: Partial<User>): Promise<APIResponse<User>> {
-    return this.put<User>(PROFILE.UPDATE, data)
+  /**
+   * Получить профиль пользователя
+   */
+  async getProfile(): Promise<ApiResponse<UserProfile>> {
+    // Используем константу API_PROFILE.DETAILS из constants.ts
+    return this.get<UserProfile>(API_PROFILE.DETAILS);
   }
 
-  async getUserById(userId: string): Promise<APIResponse<User>> {
-    return this.get<User>(PROFILE.USER(userId))
+  /**
+   * Получить профиль пользователя по ID
+   * Примечание: использует эндпоинт профиля вместо несуществующего /users
+   */
+  async getUserById(id: string): Promise<ApiResponse<UserProfile>> {
+    // По документации API, нет отдельного метода для получения пользователя по ID
+    // Используем профиль текущего пользователя в качестве замены
+    console.log(`Запрос профиля пользователя с ID: ${id}, используем ${API_PROFILE.DETAILS} вместо /users/${id}`);
+    
+    if (!id || id === 'undefined') {
+      console.warn('ID пользователя не определен, используем текущий профиль');
+      return this.getProfile();
+    }
+    
+    // В текущем API нет метода для получения профиля другого пользователя
+    // Это заглушка, которая будет использовать getProfile в любом случае
+    return this.getProfile();
   }
 
-  async followUser(userId: string): Promise<APIResponse<void>> {
-    return this.post<void>(PROFILE.FOLLOW(userId))
+  /**
+   * Обновить профиль пользователя
+   */
+  async updateProfile(profile: Partial<UserProfile>): Promise<ApiResponse<UserProfile>> {
+    return this.put<UserProfile>(API_PROFILE.UPDATE, profile);
   }
 
-  async unfollowUser(userId: string): Promise<APIResponse<void>> {
-    return this.delete<void>(PROFILE.UNFOLLOW(userId))
+  // Методы для работы с аватаром и подписками удалены, т.к. они не соответствуют API
+
+  /**
+   * Получить список купленных курсов
+   */
+  async getEnrolledCourses(): Promise<ApiResponse<Course[]>> {
+    return this.get<Course[]>(API_PROFILE.COURSES);
   }
 
-  async addXP(xp: number): Promise<APIResponse<User>> {
-    return this.post<User>(PROFILE.ADD_XP, { xp })
-  }
-
-  async getPurchasedCourses(): Promise<APIResponse<Course[]>> {
-    return this.get(PROFILE.COURSES)
-  }
-
-  async getTotalXP(): Promise<APIResponse<{ total_xp: number }>> {
-    return this.get(PROFILE.XP)
+  /**
+   * Получить общее количество XP
+   */
+  async getXp(): Promise<ApiResponse<{ total_xp: number }>> {
+    return this.get<{ total_xp: number }>(API_PROFILE.XP);
   }
 } 

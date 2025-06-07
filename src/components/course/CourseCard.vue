@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Course } from '@/types/course'
+import type { Course, CategoryId } from '@/types/course'
 import type { CourseGradient } from '@/constants/gradients'
 import { COURSE_GRADIENTS } from '@/constants/gradients'
 import { defineProps, defineEmits } from 'vue'
 
-const categoryLabels = {
+const categoryLabels: Record<CategoryId, string> = {
   programming: 'Программирование',
   design: 'Дизайн',
   marketing: 'Маркетинг',
   business: 'Бизнес'
-} as const
+}
 
 const levelLabels = {
   beginner: 'Начинающий',
@@ -31,7 +31,7 @@ const emit = defineEmits<{
 const router = useRouter()
 
 const categoryLabel = computed(() => {
-  return getCategoryLabel(props.course.category)
+  return props.course.category?.name || categoryLabels[props.course.category_id] || 'Без категории'
 })
 
 const levelLabel = computed(() => {
@@ -71,10 +71,6 @@ const handleEnroll = () => {
   } else {
     emit('enroll', props.course.id)
   }
-}
-
-const getCategoryLabel = (categoryId: string) => {
-  return categoryLabels[categoryId as keyof typeof categoryLabels] || categoryId
 }
 
 const getLevelLabel = (level: string) => {

@@ -1,14 +1,54 @@
 {
+    "schemes": [],
     "swagger": "2.0",
     "info": {
-        "description": "API для образовательной платформы с курсами и тестами",
+        "description": "API для образовательной платформы с курсами, тестами и системой прогресса обучения\nВключает функционал для студентов (просмотр и покупка курсов, прохождение уроков и тестов),\nадминистраторов (управление курсами и модерация) и общедоступные эндпоинты (категории, публичная информация о курсах).",
         "title": "Образовательная платформа API",
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8081",
-    "basePath": "/api/v1",
+    "host": "localhost:8090",
+    "basePath": "/api/v1/edu",
     "paths": {
+        "/admin/courses": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создать новый курс",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Создать курс",
+                "parameters": [
+                    {
+                        "description": "Данные курса",
+                        "name": "course",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Course"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Course"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/courses/pending": {
             "get": {
                 "security": [
@@ -50,6 +90,84 @@
                                 "$ref": "#/definitions/models.Course"
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/admin/courses/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновить существующий курс",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Обновить курс",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID курса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные курса",
+                        "name": "course",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Course"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Course"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Удалить существующий курс",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Удалить курс",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID курса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -146,6 +264,32 @@
                 }
             }
         },
+        "/categories": {
+            "get": {
+                "description": "Получить список всех категорий курсов",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Список категорий",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Category"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/courses": {
             "get": {
                 "description": "Получить список всех курсов",
@@ -181,43 +325,6 @@
                             "items": {
                                 "$ref": "#/definitions/models.Course"
                             }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Создать новый курс",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "courses"
-                ],
-                "summary": "Создать курс",
-                "parameters": [
-                    {
-                        "description": "Данные курса",
-                        "name": "course",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Course"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.Course"
                         }
                     }
                 }
@@ -298,82 +405,6 @@
                         "schema": {
                             "$ref": "#/definitions/models.Course"
                         }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Обновить существующий курс",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "courses"
-                ],
-                "summary": "Обновить курс",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID курса",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Данные курса",
-                        "name": "course",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Course"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Course"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Удалить существующий курс",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "courses"
-                ],
-                "summary": "Удалить курс",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID курса",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
                     }
                 }
             }
@@ -650,12 +681,12 @@
                 "summary": "Купить курс",
                 "parameters": [
                     {
-                        "description": "ID курса",
-                        "name": "course",
+                        "description": "Данные для покупки курса",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/handler.PurchaseCourseRequest"
                         }
                     }
                 ],
@@ -705,6 +736,43 @@
                 }
             }
         },
+        "/student/courses/{courseId}/structure": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получить полную структуру курса с уроками и прогрессом для купленного курса",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "courses"
+                ],
+                "summary": "Получить структуру курса",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID курса",
+                        "name": "courseId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CourseStructure"
+                        }
+                    }
+                }
+            }
+        },
         "/student/lessons/{lessonId}": {
             "get": {
                 "description": "Получить содержимое конкретного урока",
@@ -736,9 +804,78 @@
                     }
                 }
             }
+        },
+        "/student/lessons/{lessonId}/test": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получить тест, привязанный к уроку (если есть)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "lessons"
+                ],
+                "summary": "Получить тест урока",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID урока",
+                        "name": "lessonId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.TestResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "handler.PurchaseCourseRequest": {
+            "type": "object",
+            "required": [
+                "course_id"
+            ],
+            "properties": {
+                "course_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
+        "models.Category": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Course": {
             "type": "object",
             "properties": {
@@ -809,10 +946,41 @@
                 }
             }
         },
+        "models.CourseStructure": {
+            "type": "object",
+            "properties": {
+                "completed_lessons": {
+                    "type": "integer"
+                },
+                "course": {
+                    "description": "Основная информация о курсе",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Course"
+                        }
+                    ]
+                },
+                "lessons": {
+                    "description": "Список уроков курса",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Lesson"
+                    }
+                },
+                "progress": {
+                    "type": "number"
+                },
+                "total_lessons": {
+                    "description": "Статистика прогресса",
+                    "type": "integer"
+                }
+            }
+        },
         "models.Lesson": {
             "type": "object",
             "properties": {
                 "completed": {
+                    "description": "Поля для отображения прогресса",
                     "type": "boolean"
                 },
                 "content": {
@@ -824,20 +992,115 @@
                 "created_at": {
                     "type": "string"
                 },
+                "has_test": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
                 "order_num": {
                     "type": "integer"
                 },
+                "passed_test": {
+                    "type": "boolean"
+                },
                 "requires_test": {
                     "type": "boolean"
+                },
+                "test_score": {
+                    "type": "integer"
                 },
                 "title": {
                     "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "viewed_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Question": {
+            "type": "object",
+            "properties": {
+                "correct_answer": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "question_text": {
+                    "type": "string"
+                },
+                "test_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Test": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lesson_id": {
+                    "type": "string"
+                },
+                "passing_score": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TestResponse": {
+            "type": "object",
+            "properties": {
+                "attempts_count": {
+                    "type": "integer"
+                },
+                "last_score": {
+                    "description": "Информация о прогрессе",
+                    "type": "integer"
+                },
+                "passed": {
+                    "type": "boolean"
+                },
+                "passing_score": {
+                    "description": "Проходной балл",
+                    "type": "integer"
+                },
+                "questions": {
+                    "description": "Вопросы теста (без правильных ответов)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Question"
+                    }
+                },
+                "test": {
+                    "description": "Основная информация о тесте",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Test"
+                        }
+                    ]
                 }
             }
         },

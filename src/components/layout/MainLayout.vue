@@ -9,6 +9,9 @@ import Container from '@/components/ui/Container.vue'
 import { RouterView } from 'vue-router'
 import MobileNavPanel from './MobileNavPanel.vue'
 
+// Добавляем консоль для отладки
+console.log('MainLayout компонент загружен')
+
 const isNavCollapsed = ref(true)
 const isProfileCollapsed = ref(true)
 const isBlurred = ref(false)
@@ -28,6 +31,7 @@ const handleZoom = () => {
 }
 
 onMounted(() => {
+  console.log('MainLayout: onMounted')
   updateScreenSize()
   handleZoom()
   window.addEventListener('resize', updateScreenSize)

@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/user'
-import type { APIResponse } from '@/api/base'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -16,9 +15,29 @@ const fetchUser = async () => {
   try {
     loading.value = true
     error.value = null
+    
+    // Если id не указан или равен undefined, используем текущего пользователя
     const userId = route.params.id as string
-    const response = await authStore.getUserById(userId)
-    profileUser.value = (response as any).data || response as User
+    
+    if (!userId || userId === 'undefined') {
+      console.log('Sidebar: ID не указан, используем профиль текущего пользователя')
+      // Используем данные текущего пользователя из authStore
+      profileUser.value = authStore.currentUser as User
+      
+      // Если данных пользователя нет, загрузим их
+      if (!profileUser.value) {
+        const currentUserData = await authStore.loadUserProfile()
+        profileUser.value = currentUserData as User
+      }
+    } else {
+      console.log(`Sidebar: Загрузка профиля пользователя с ID: ${userId}`)
+      const response = await authStore.getUserById(userId)
+      profileUser.value = (response as any).data || response as User
+    }
+    
+    if (!profileUser.value) {
+      throw new Error('Не удалось загрузить данные пользователя')
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Ошибка при загрузке пользователя'
     profileUser.value = null
@@ -33,6 +52,9 @@ onMounted(() => {
 
 // Проверяем, является ли текущий пользователь владельцем профиля
 const isOwner = computed(() => {
+  if (!route.params.id || route.params.id === 'undefined') {
+    return true; // Если ID не указан, значит это текущий пользователь
+  }
   return authStore.currentUser?.id === route.params.id
 })
 

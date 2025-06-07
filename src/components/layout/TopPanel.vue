@@ -16,7 +16,6 @@ const selectedCourses = ref<Course[]>([
     id: '1',
     title: 'Основы Vue.js 3',
     description: 'Изучите основы современного фреймворка Vue.js 3 с нуля',
-    category: 'programming',
     level: 'beginner',
     thumbnail: 'https://picsum.photos/600/400?random=1',
     price: 0,

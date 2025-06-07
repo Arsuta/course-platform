@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCourseStore } from '@/stores/courses'
+import type { CategoryId } from '@/types/course'
 import CourseSlider from '@/components/course/CourseSlider.vue'
 import HomeHeader from '@/components/home/HomeHeader.vue'
 import CourseCategories from '@/components/course/CourseCategories.vue'
@@ -10,7 +11,7 @@ import CourseCategories from '@/components/course/CourseCategories.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 const courseStore = useCourseStore()
-const selectedCategory = ref('')
+const selectedCategory = ref<CategoryId | 'all'>('all')
 const error = ref<string | null>(null)
 const loading = ref(false)
 
