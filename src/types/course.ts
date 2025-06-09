@@ -1,5 +1,6 @@
 import type { CourseGradient as GradientType } from '@/constants/gradients'
 import type { CourseCategory as _CourseCategory, CourseLevel } from '@/constants/course'
+import type { Course as ApiCourse } from '@/api/types'
 
 export type CourseGradient = GradientType
 export type CourseCategory = _CourseCategory
@@ -40,40 +41,57 @@ export interface Module {
   isCompleted?: boolean
 }
 
-export type CategoryId = 'programming' | 'design' | 'marketing' | 'business'
+export type CategoryId = 
+  | 'programming' 
+  | 'design' 
+  | 'marketing' 
+  | 'business' 
+  | 'personal-development'
+  | 'language'
+  | 'data-science'
+  | 'health'
+  | 'other'
 
 export interface Category {
   id: CategoryId
   name: string
   description: string
-  created_at: string
-  updated_at: string
+  icon: string
 }
 
 export interface Course {
   id: string
   title: string
-  description: string
-  thumbnail: string
+  description?: string
+  category_id: string
+  level?: CourseLevel
   price: number
-  duration: number
-  level: string
-  rating: number
-  students_count: number
-  category_id: CategoryId
-  created_by: string
-  status: string
-  created_at: string
-  updated_at: string
-  category?: Category
-  modules?: Module[]
-  author?: Author
-  image?: string
-  gradient?: string
-  isEnrolled?: boolean
-  isFree?: boolean
-  requirements?: string[]
-  skills?: string[]
+  thumbnail?: string
+  duration?: number
+  status?: string
+  rating?: number
+  author_id?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CourseFilters {
+  category_id?: string
+  level?: CourseLevel
+  price_min?: number
+  price_max?: number
+  rating_min?: number
+  search?: string
+  page?: number
+  limit?: number
+}
+
+export interface CoursesResponse {
+  courses: Course[]
+  total: number
+  page: number
+  limit: number
+  total_pages: number
 }
 
 export interface CourseResponse {
@@ -142,4 +160,18 @@ export interface PaginatedResponse<T> {
   page: number
   per_page: number
   total_pages: number
+}
+
+export interface ExtendedCourse extends ApiCourse {
+  image?: string;
+  authorAvatar?: string;
+  author?: string;
+  lessons?: number;
+  students?: number;
+  isFeatured?: boolean;
+  isPopular?: boolean;
+  isNew?: boolean;
+  reviewCount?: number;
+  category?: string;
+  tags?: string[];
 }

@@ -6,10 +6,36 @@ import {
 } from '@heroicons/vue/24/outline'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useProfileStore } from '@/stores/profile'
+import { onMounted, ref, computed } from 'vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const profileStore = useProfileStore()
 const user = authStore.currentUser
+
+// Данные профиля
+const isProfileLoaded = ref(false)
+
+// Вычисляемые свойства для уровня
+const userLevel = computed(() => {
+  return profileStore.getCurrentLevel()
+})
+
+// Прогресс уровня
+const levelProgress = computed(() => {
+  return profileStore.getLevelProgress()
+})
+
+// Загружаем профиль при монтировании
+onMounted(async () => {
+  try {
+    await profileStore.getProfile()
+    isProfileLoaded.value = true
+  } catch (error) {
+    console.error('Ошибка при загрузке профиля:', error)
+  }
+})
 
 const handleLogout = async () => {
   try {
@@ -61,17 +87,29 @@ defineEmits<{
           <img 
             v-if="user?.avatar" 
             :src="user.avatar" 
-            :alt="user.name"
+            :alt="user.first_name || 'User'"
             class="w-full h-full object-cover"
           />
-          <span v-else>{{ user?.name?.charAt(0) || 'U' }}</span>
+          <span v-else>{{ user?.first_name?.charAt(0) || 'U' }}</span>
         </div>
         <div 
           class="ml-2 transition-all duration-500 ease-in-out overflow-hidden whitespace-nowrap"
           :style="{ maxWidth: isCollapsed ? '0' : '200px', opacity: isCollapsed ? 0 : 1 }"
         >
-          <h3 class="font-medium text-gray-900">{{ user?.name || 'Гость' }}</h3>
+          <h3 class="font-medium text-gray-900">{{ user?.first_name || 'Гость' }} {{ user?.last_name || '' }}</h3>
           <p class="text-sm text-gray-500">{{ user?.email || 'Войдите в систему' }}</p>
+          
+          <!-- Уровень пользователя -->
+          <div v-if="isProfileLoaded && profileStore.user" class="mt-1 flex items-center gap-1">
+            <div class="bg-primary text-white text-xs font-medium w-5 h-5 rounded-full flex items-center justify-center">
+              {{ userLevel }}
+            </div>
+            <div class="flex-1">
+              <div class="h-1.5 w-full bg-gray-200 rounded-full">
+                <div class="h-1.5 bg-primary rounded-full" :style="{ width: `${levelProgress}%` }"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

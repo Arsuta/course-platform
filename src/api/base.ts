@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig, AxiosHeaders } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, AxiosError, AxiosRequestConfig, AxiosHeaders } from 'axios';
 import { apiClient } from './client';
 import type { ApiResponse } from './types';
 
@@ -26,7 +26,7 @@ export class BaseApiService {
         
         // Добавляем заголовки для работы с CORS
         if (!config.headers) {
-          config.headers = new AxiosHeaders();
+          config.headers = {} as AxiosHeaders;
         }
         
         // Удаляем проблемные заголовки, вызывающие ошибки
@@ -66,48 +66,60 @@ export class BaseApiService {
   /**
    * Отправка GET запроса
    */
-  protected async get<R>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<R>> {
+  protected async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.client.get<ApiResponse<R>>(url, config);
-      return response.data;
-    } catch (error: any) {
-      this.handleError(error);
-      throw error;
+      console.log(`GET запрос к ${url}`, config);
+      const response: AxiosResponse = await this.client.get(url, config);
+      
+      // Логируем успешный ответ
+      console.log(`Успешный GET ответ от ${url}:`, response.status);
+      
+      // Обрабатываем ответ
+      return this.processResponse<T>(response);
+    } catch (error) {
+      // Логируем ошибки
+      console.error(`Ошибка GET запроса к ${url}:`, error);
+      return this.processError<T>(error as AxiosError);
     }
   }
 
   /**
    * Отправка POST запроса
    */
-  protected async post<R, D = any>(url: string, data?: D, config?: AxiosRequestConfig): Promise<ApiResponse<R>> {
+  protected async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      // Убираем дублирование baseURL в логах
-      console.log(`POST ${url}`, { data });
-      const response = await this.client.post<ApiResponse<R>>(url, data, config);
-      console.log(`Ответ от сервера [POST ${url}]:`, { 
-        status: response.status, 
-        statusText: response.statusText,
-        headers: response.headers,
-        data: response.data 
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error(`Ошибка при выполнении POST ${url}:`, error);
-      this.handleError(error);
-      throw error;
+      console.log(`POST запрос к ${url}`, { data, config });
+      const response: AxiosResponse = await this.client.post(url, data, config);
+      
+      // Логируем успешный ответ
+      console.log(`Успешный POST ответ от ${url}:`, response.status);
+      
+      // Обрабатываем ответ
+      return this.processResponse<T>(response);
+    } catch (error) {
+      // Логируем ошибки
+      console.error(`Ошибка POST запроса к ${url}:`, error);
+      return this.processError<T>(error as AxiosError);
     }
   }
 
   /**
    * Отправка PUT запроса
    */
-  protected async put<R, D = any>(url: string, data?: D, config?: AxiosRequestConfig): Promise<ApiResponse<R>> {
+  protected async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.client.put<ApiResponse<R>>(url, data, config);
-      return response.data;
-    } catch (error: any) {
-      this.handleError(error);
-      throw error;
+      console.log(`PUT запрос к ${url}`, { data, config });
+      const response: AxiosResponse = await this.client.put(url, data, config);
+      
+      // Логируем успешный ответ
+      console.log(`Успешный PUT ответ от ${url}:`, response.status);
+      
+      // Обрабатываем ответ
+      return this.processResponse<T>(response);
+    } catch (error) {
+      // Логируем ошибки
+      console.error(`Ошибка PUT запроса к ${url}:`, error);
+      return this.processError<T>(error as AxiosError);
     }
   }
 
@@ -122,13 +134,20 @@ export class BaseApiService {
   /**
    * Отправка DELETE запроса
    */
-  protected async delete<R>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<R>> {
+  protected async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.client.delete<ApiResponse<R>>(url, config);
-      return response.data;
-    } catch (error: any) {
-      this.handleError(error);
-      throw error;
+      console.log(`DELETE запрос к ${url}`, config);
+      const response: AxiosResponse = await this.client.delete(url, config);
+      
+      // Логируем успешный ответ
+      console.log(`Успешный DELETE ответ от ${url}:`, response.status);
+      
+      // Обрабатываем ответ
+      return this.processResponse<T>(response);
+    } catch (error) {
+      // Логируем ошибки
+      console.error(`Ошибка DELETE запроса к ${url}:`, error);
+      return this.processError<T>(error as AxiosError);
     }
   }
 
@@ -145,49 +164,56 @@ export class BaseApiService {
   }
 
   /**
-   * Обработка ошибок API
+   * Обработать успешный ответ от сервера
    */
-  private handleError(error: any) {
-    if (error.response) {
-      // Ошибка от сервера
-      console.error('API Error Response:', {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        url: error.response?.config?.url,
-        method: error.response?.config?.method,
-        data: error.response.data,
-        headers: error.response.headers
-      });
-      
-      // Детальное логирование различных типов ошибок
-      if (error.response.status === 401) {
-        console.error('Ошибка авторизации: Не авторизован (401)');
-      } else if (error.response.status === 403) {
-        console.error('Ошибка доступа: Запрещено (403)');
-      } else if (error.response.status === 404) {
-        console.error('Ресурс не найден (404):', error.response?.config?.url);
-      } else if (error.response.status === 500) {
-        console.error('Внутренняя ошибка сервера (500)');
-      } else if (error.response.status === 409) {
-        console.error('Конфликт данных (409):', error.response.data);
-      }
-    } else if (error.request) {
-      // Запрос был сделан, но ответ не получен
-      console.error('API No Response:', {
-        request: error.request,
-        url: error.config?.url,
-        method: error.config?.method
-      });
-      console.error('Не получен ответ от сервера. Проверьте подключение к интернету или доступность сервера.');
+  private processResponse<T>(response: AxiosResponse): ApiResponse<T> {
+    // Проверяем, есть ли данные в ответе
+    const data = response.data;
+    
+    // Сначала проверяем, есть ли поле data в ответе
+    if (data && data.data !== undefined) {
+      // Возвращаем данные из поля data
+      return data as ApiResponse<T>;
     } else {
-      // Произошла ошибка при настройке запроса
-      console.error('API Request Error:', error.message);
-      console.error('Детали ошибки:', error);
+      // Если поля data нет, возвращаем весь ответ
+      return data as ApiResponse<T>;
+    }
+  }
+
+  /**
+   * Обработать ошибку запроса
+   */
+  private processError<T>(error: AxiosError): ApiResponse<T> {
+    // Если есть ответ от сервера, возвращаем его
+    if (error.response) {
+      const errorData = error.response.data as any;
+      const errorMessage = errorData.message || error.message;
+      
+      throw new Error(errorMessage);
     }
     
-    // Ошибка rate limit - логируем отдельно
-    if (error.response && error.response.status === 429) {
-      console.warn('Rate limit exceeded. Waiting before next request...');
+    // Иначе возвращаем ошибку сети
+    throw new Error(error.message || 'Ошибка сети');
+  }
+
+  /**
+   * Выполнить запрос к API (для прямого использования axios)
+   */
+  protected async request<T>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      // Выполняем запрос через axios
+      console.log(`Прямой запрос ${config.method} к ${config.url}`, config);
+      const response: AxiosResponse = await axios(config);
+      
+      // Логируем успешный ответ
+      console.log(`Успешный ответ на прямой запрос:`, response.status);
+      
+      // Обрабатываем ответ
+      return this.processResponse<T>(response);
+    } catch (error) {
+      // Логируем ошибки
+      console.error(`Ошибка прямого запроса:`, error);
+      return this.processError<T>(error as AxiosError);
     }
   }
 } 

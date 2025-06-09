@@ -8,12 +8,12 @@
     </div>
     
     <div class="progress-bar-container">
-      <div class="progress-bar" :style="{ width: `${progress.progress_percent}%` }"></div>
+      <div class="progress-bar" :style="{ width: `${progressPercent}%` }"></div>
     </div>
     
     <div class="progress-footer">
-      <div class="progress-percent">{{ progress.progress_percent }}% завершено</div>
-      <div v-if="progress.completed" class="completed-badge">
+      <div class="progress-percent">{{ progressPercent }}% завершено</div>
+      <div v-if="isCompleted" class="completed-badge">
         Курс завершен
       </div>
     </div>
@@ -21,43 +21,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, PropType } from 'vue'
-import type { CourseProgress as ProgressType } from '@/api/types'
-import { progressService } from '@/api/services'
+import { ref, onMounted } from 'vue'
+import type { CourseProgress } from '@/api/types'
 
-const props = defineProps({
-  courseId: {
-    type: String,
-    required: true
-  }
+const props = defineProps<{
+  progress: CourseProgress
+}>()
+
+// Вычисляемые свойства для отображения прогресса
+const progressPercent = ref(props.progress.percentage || 0)
+const progressLabel = ref(`${props.progress.completed_lessons || 0}/${props.progress.total_lessons || 0}`)
+const isCompleted = ref(!!props.progress.completed_at)
+
+// Обновление данных при изменении props
+onMounted(() => {
+  updateProgress()
 })
 
-const progress = ref<ProgressType>({
-  course_id: props.courseId,
-  completed_lessons: 0,
-  total_lessons: 0,
-  progress_percent: 0,
-  last_activity: '',
-  completed: false
-})
+// Функция обновления прогресса
+const updateProgress = () => {
+  progressPercent.value = props.progress.percentage || 0
+  progressLabel.value = `${props.progress.completed_lessons || 0}/${props.progress.total_lessons || 0}`
+  isCompleted.value = !!props.progress.completed_at
+}
 
-const isLoading = ref(false)
-const error = ref<string | null>(null)
-
-// Загрузка прогресса курса
-onMounted(async () => {
-  try {
-    isLoading.value = true
-    const response = await progressService.getCourseProgress(props.courseId)
-    if (response.data) {
-      progress.value = response.data
-    }
-  } catch (err: any) {
-    error.value = err.message || 'Ошибка при загрузке прогресса'
-    console.error('Failed to load course progress:', err)
-  } finally {
-    isLoading.value = false
-  }
+// Определение CSS классов в зависимости от прогресса
+const progressBarClass = ref({
+  'bg-green-500': progressPercent.value > 75,
+  'bg-blue-500': progressPercent.value > 50 && progressPercent.value <= 75,
+  'bg-yellow-500': progressPercent.value > 25 && progressPercent.value <= 50,
+  'bg-red-500': progressPercent.value <= 25
 })
 </script>
 

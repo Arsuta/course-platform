@@ -1,7 +1,7 @@
 <template>
   <div class="verification-container">
     <div class="verification-card">
-      <h1>Подтверждение</h1>
+      <h1 class="verification-title">Подтверждение</h1>
       <p class="verification-description">
         На вашу почту <span class="email-highlight">{{ displayEmail }}</span> был отправлен код подтверждения. 
         Пожалуйста, введите его ниже для продолжения.
@@ -11,22 +11,32 @@
       </p>
 
       <div class="code-input-container">
-        <input
-          v-model="code"
-          type="text"
-          class="code-input"
-          placeholder="Введите 6-значный код"
-          maxlength="6"
-          pattern="\d{6}"
-          inputmode="numeric"
-        />
+        <div class="code-digits-container">
+          <template v-for="(digit, index) in 6" :key="index">
+            <input
+              ref="codeInputs"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="1"
+              class="code-digit"
+              :value="code[index] || ''"
+              @input="handleDigitInput($event, index)"
+              @keydown="handleKeyDown($event, index)"
+              @paste="handlePaste"
+              @focus="handleFocus"
+            />
+          </template>
+        </div>
       </div>
 
       <div v-if="errorMessage" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
         {{ errorMessage }}
       </div>
 
       <div v-if="successMessage" class="success-message">
+        <i class="fas fa-check-circle"></i>
         {{ successMessage }}
       </div>
 
@@ -67,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -107,6 +117,7 @@ console.log('Компонент верификации создан с пара�
 
 // Состояние
 const code = ref('')
+const codeInputs = ref<HTMLInputElement[]>([])
 const isLoading = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
@@ -114,45 +125,107 @@ const remainingTime = ref(60)
 const canResend = ref(false)
 const resendLoading = ref(false)
 
+// Обработка ввода цифры кода
+const handleDigitInput = (event: Event, index: number) => {
+  const input = event.target as HTMLInputElement
+  const value = input.value.replace(/[^0-9]/g, '')
+  
+  // Обновляем значение в текущем инпуте
+  input.value = value.slice(-1)
+  
+  // Обновляем общий код
+  const codeArray = code.value.split('')
+  codeArray[index] = input.value
+  code.value = codeArray.join('')
+  
+  // Если введена цифра, переходим к следующему полю
+  if (value && index < 5) {
+    codeInputs.value[index + 1]?.focus()
+  }
+  
+  // Если код полностью введен, отправляем его
+  if (code.value.length === 6) {
+    nextTick(() => {
+      verifyCode()
+    })
+  }
+}
+
+// Обработка нажатия клавиш
+const handleKeyDown = (event: KeyboardEvent, index: number) => {
+  // Если нажат Backspace и поле пустое, переходим к предыдущему полю
+  if (event.key === 'Backspace' && !code.value[index] && index > 0) {
+    codeInputs.value[index - 1]?.focus()
+  }
+  
+  // Если нажата стрелка влево, переходим к предыдущему полю
+  if (event.key === 'ArrowLeft' && index > 0) {
+    codeInputs.value[index - 1]?.focus()
+  }
+  
+  // Если нажата стрелка вправо, переходим к следующему полю
+  if (event.key === 'ArrowRight' && index < 5) {
+    codeInputs.value[index + 1]?.focus()
+  }
+}
+
+// Обработка вставки кода
+const handlePaste = (event: ClipboardEvent) => {
+  event.preventDefault()
+  
+  const pastedData = event.clipboardData?.getData('text')
+  if (!pastedData) return
+  
+  // Извлекаем только цифры
+  const digits = pastedData.replace(/\D/g, '').slice(0, 6)
+  
+  // Заполняем поля ввода
+  digits.split('').forEach((digit, index) => {
+    if (index < 6) {
+      if (codeInputs.value[index]) {
+        codeInputs.value[index].value = digit
+      }
+    }
+  })
+  
+  // Обновляем общий код
+  code.value = digits
+  
+  // Фокусируемся на последнем заполненном поле или следующем пустом
+  const focusIndex = Math.min(digits.length, 5)
+  codeInputs.value[focusIndex]?.focus()
+  
+  // Если код полностью введен, отправляем его
+  if (code.value.length === 6) {
+    nextTick(() => {
+      verifyCode()
+    })
+  }
+}
+
+// Обработка фокуса на поле ввода
+const handleFocus = (event: FocusEvent) => {
+  const input = event.target as HTMLInputElement
+  if (input) {
+    input.select()
+  }
+}
+
 // Обработка ошибок верификации
 const handleVerificationError = (err: any) => {
   console.error('Ошибка верификации:', err);
   
-  // Проверяем сообщение об ошибке
-  const errorResponse = err?.response?.data;
-  
-  // Проверяем разные варианты сообщений об ошибках
-  if (errorResponse) {
-    console.log('Данные ошибки:', errorResponse);
+  // Проверяем структуру ошибки
+  if (err.response && err.response.data) {
+    const errorResponse = err.response.data;
     
-    // Истек код верификации
-    if (errorResponse.error === 'verification code expired') {
-      errorMessage.value = 'Код верификации истек. Пожалуйста, запросите новый код.';
-      startResendTimer(0); // Сразу разрешаем повторную отправку
-    } 
-    // Неверный код
-    else if (errorResponse.error === 'invalid verification code' || 
-             errorResponse.error === 'invalid code') {
-      errorMessage.value = 'Неверный код верификации. Пожалуйста, проверьте и попробуйте снова.';
-    }
-    // Верификация уже завершена
-    else if (errorResponse.error === 'email already verified' || 
-             errorResponse.error === 'already verified') {
-      errorMessage.value = 'Email уже подтвержден. Пожалуйста, войдите в систему.';
-      setTimeout(() => {
-        router.push('/auth/login');
-      }, 2000);
-    }
-    // Не найден ID верификации
-    else if (errorResponse.error === 'verification id not found') {
-      errorMessage.value = 'Запрос на верификацию не найден. Пожалуйста, запросите новый код.';
-      startResendTimer(0);
-    }
-    // Общее сообщение об ошибке, если есть
-    else if (errorResponse.message) {
+    // Обработка различных форматов ошибок от API
+    if (errorResponse.message) {
       errorMessage.value = errorResponse.message;
     }
-    // Если есть просто поле error как строка
+    else if (errorResponse.error && typeof errorResponse.error === 'object' && errorResponse.error.message) {
+      errorMessage.value = errorResponse.error.message;
+    }
     else if (typeof errorResponse.error === 'string') {
       errorMessage.value = errorResponse.error;
     }
@@ -203,35 +276,32 @@ const verifyCode = async () => {
     
     // Проверяем авторизацию после верификации
     if (success) {
-      console.log('Верификация успешна, проверяем аутентификацию');
-      // Проверяем, аутентифицирован ли пользователь
-      if (authStore.isAuthenticated) {
-        console.log('Пользователь аутентифицирован, перенаправление на главную');
-        // Очищаем временные данные из localStorage
-        localStorage.removeItem('verification_email');
-        localStorage.removeItem('registration_email');
-        localStorage.removeItem('verification_id');
-        // После успешной верификации перенаправляем на главную
-        router.push('/');
-      } else {
-        console.warn('Верификация успешна, но пользователь не аутентифицирован');
-        // Загружаем профиль пользователя повторно
-        try {
-          await authStore.loadUserProfile();
-          if (authStore.isAuthenticated) {
-            console.log('Профиль успешно загружен, перенаправление на главную');
-            router.push('/');
-          } else {
-            console.error('Не удалось загрузить профиль после верификации');
-            throw new Error('Не удалось загрузить профиль пользователя после верификации');
-          }
-        } catch (profileErr) {
-          console.error('Ошибка при загрузке профиля:', profileErr);
-          throw new Error('Ошибка при загрузке профиля после верификации');
+      // Проверяем, авторизован ли пользователь
+      const isAuthenticated = authStore.isAuthenticated;
+      console.log('Статус авторизации после верификации:', isAuthenticated);
+      
+      // Показываем сообщение об успехе
+      successMessage.value = 'Верификация успешно завершена!';
+      errorMessage.value = null;
+      
+      // Удаляем временные данные из localStorage
+      localStorage.removeItem('verification_email');
+      localStorage.removeItem('registration_email');
+      
+      // Перенаправляем пользователя
+      setTimeout(() => {
+        if (isAuthenticated) {
+          // Если пользователь авторизован, перенаправляем на главную
+          router.push('/');
+        } else {
+          // Если пользователь не авторизован, перенаправляем на страницу входа
+          router.push('/auth/login');
         }
-      }
+      }, 1500);
     } else {
-      throw new Error('Неизвестная ошибка верификации');
+      // Если верификация не удалась, показываем сообщение об ошибке
+      errorMessage.value = 'Не удалось подтвердить код. Пожалуйста, попробуйте снова.';
+      successMessage.value = null;
     }
   } catch (err: any) {
     handleVerificationError(err);
@@ -300,6 +370,10 @@ const resendCode = async () => {
     
     // Очищаем поле ввода кода
     code.value = '';
+    codeInputs.value.forEach(input => {
+      if (input) input.value = '';
+    });
+    codeInputs.value[0]?.focus();
   } catch (err: any) {
     console.error('Ошибка при повторной отправке кода:', err);
     errorMessage.value = err.message || 'Ошибка при отправке кода';
@@ -321,20 +395,26 @@ const resendCode = async () => {
 
 // Запускаем таймер при монтировании компонента
 onMounted(() => {
-  console.log('Компонент верификации смонтирован, параметры:', {
-    type: verificationType.value,
-    id: verificationId.value
-  })
+  // Фокусируемся на первом поле ввода
+  nextTick(() => {
+    if (codeInputs.value[0]) {
+      codeInputs.value[0].focus();
+    }
+  });
   
-  // Проверяем наличие необходимых параметров
-  if (!verificationType.value || !verificationId.value) {
-    console.error('Отсутствуют необходимые параметры для верификации')
-    errorMessage.value = 'Ошибка: отсутствуют необходимые параметры для верификации'
-    return
+  // Запускаем таймер для повторной отправки
+  startResendTimer();
+  
+  // Если в URL есть параметр error, показываем его
+  if (route.query.error) {
+    errorMessage.value = route.query.error as string;
   }
   
-  startResendTimer()
-})
+  // Если в URL есть параметр success, показываем его
+  if (route.query.success) {
+    successMessage.value = route.query.success as string;
+  }
+});
 </script>
 
 <style scoped>
@@ -343,130 +423,211 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--color-bg);
+  padding: 1rem;
 }
 
 .verification-card {
-  width: 90%;
-  max-width: 400px;
-  background: white;
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-h1 {
+  width: 100%;
+  max-width: 480px;
   text-align: center;
-  color: #333;
-  margin-bottom: 1rem;
 }
 
-.verification-description {
-  text-align: center;
-  color: #666;
-  margin-bottom: 2rem;
-}
-
-.code-input-container {
+.verification-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
   margin-bottom: 1.5rem;
 }
 
-.code-input {
-  width: 100%;
-  padding: 12px;
-  font-size: 18px;
-  text-align: center;
-  letter-spacing: 4px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  transition: border-color 0.3s;
+.verification-description {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
 }
 
-.code-input:focus {
-  border-color: #4a90e2;
+.verification-note {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.email-highlight {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.code-input-container {
+  margin-bottom: 2rem;
+}
+
+.code-digits-container {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.code-digit {
+  width: 3rem;
+  height: 3.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.code-digit:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
   outline: none;
 }
 
 .error-message {
-  color: #e74c3c;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
   margin-bottom: 1.5rem;
-  text-align: center;
-  padding: 8px;
-  background-color: #ffeeee;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
 }
 
 .success-message {
-  color: #2ecc71;
+  background-color: #dcfce7;
+  color: #15803d;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
   margin-bottom: 1.5rem;
-  text-align: center;
-  padding: 8px;
-  background-color: #eeffee;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
 }
 
 .actions {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .verify-button {
-  background-color: #4a90e2;
+  background-color: var(--color-primary);
   color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
   border: none;
-  padding: 12px;
-  border-radius: 4px;
-  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s ease;
 }
 
 .verify-button:hover:not(:disabled) {
-  background-color: #3a80d2;
+  background-color: var(--color-primary-dark);
 }
 
 .verify-button:disabled {
-  background-color: #a0c4f0;
+  opacity: 0.6;
   cursor: not-allowed;
-}
-
-.resend-container {
-  text-align: center;
 }
 
 .resend-button {
   background-color: transparent;
-  color: #4a90e2;
-  border: 1px solid #4a90e2;
-  padding: 8px 16px;
-  border-radius: 4px;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  border: none;
   cursor: pointer;
-  transition: all 0.3s;
-  width: 100%;
+  padding: 0.5rem;
+  transition: color 0.2s ease;
 }
 
 .resend-button:hover:not(:disabled) {
-  background-color: #f0f7ff;
+  color: var(--color-primary-dark);
+  text-decoration: underline;
 }
 
 .resend-button:disabled {
-  color: #aaa;
-  border-color: #ddd;
+  opacity: 0.6;
   cursor: not-allowed;
-}
-
-.back-link {
-  text-align: center;
-  margin-top: 1.5rem;
+  color: var(--color-text-muted);
 }
 
 .back-link a {
-  color: #666;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 .back-link a:hover {
+  color: var(--color-primary);
   text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .verification-card {
+    padding: 1.5rem;
+  }
+  
+  .code-digit {
+    width: 2.5rem;
+    height: 3rem;
+    font-size: 1.25rem;
+  }
+}
+
+/* Dark mode styles */
+:global(.dark) .verification-card {
+  background-color: var(--color-bg-secondary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+:global(.dark) .code-digit {
+  background-color: var(--color-bg-secondary);
+  border-color: #4b5563;
+  color: var(--color-text-primary);
+}
+
+:global(.dark) .verification-title {
+  color: var(--color-text-primary);
+}
+
+:global(.dark) .verification-description {
+  color: var(--color-text-secondary);
+}
+
+:global(.dark) .verification-note {
+  color: var(--color-text-muted);
+}
+
+:global(.dark) .error-message {
+  background-color: rgba(185, 28, 28, 0.2);
+  color: #ef4444;
+}
+
+:global(.dark) .success-message {
+  background-color: rgba(21, 128, 61, 0.2);
+  color: #22c55e;
+}
+
+:global(.dark) .back-link a {
+  color: var(--color-text-secondary);
+}
+
+:global(.dark) .back-link a:hover {
+  color: var(--color-primary-light);
 }
 </style> 

@@ -15,33 +15,83 @@ const totalFollowers = ref(0)
 const currentPage = ref(1)
 const perPage = ref(10)
 
-const fetchFollowers = async () => {
+// Добавить моковые данные для подписчиков
+const mockFollowers = ref([
+  {
+    id: '1',
+    first_name: 'Иван',
+    last_name: 'Петров',
+    email: 'ivan@example.com',
+    avatar: '/avatars/user1.jpg',
+    isFollowing: true
+  },
+  {
+    id: '2',
+    first_name: 'Анна',
+    last_name: 'Сидорова',
+    email: 'anna@example.com',
+    avatar: '/avatars/user2.jpg',
+    isFollowing: false
+  },
+  {
+    id: '3',
+    first_name: 'Алексей',
+    last_name: 'Иванов',
+    email: 'alex@example.com',
+    avatar: '/avatars/user3.jpg',
+    isFollowing: true
+  }
+])
+
+// Заменить вызовы API на работу с моковыми данными
+const getFollowers = async () => {
+  loading.value = true
   try {
-    loading.value = true
-    error.value = null
-    
-    const userId = route.params.id as string
-    if (!userId) return
-    
-    const response = await profileStore.getUserById(userId)
-    const user = response.data
-    
-    if (user.followers) {
-      followers.value = []
-      totalFollowers.value = user.followers.length
-      
-      // Получаем информацию о каждом подписчике
-      const followerPromises = user.followers.map((id: string) => 
-        profileStore.getUserById(id)
-      )
-      
-      const followerResponses = await Promise.all(followerPromises)
-      followers.value = followerResponses.map((response: ApiResponse<User>) => response.data)
-    }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке подписчиков'
+    // Имитация загрузки данных
+    await new Promise(resolve => setTimeout(resolve, 500))
+    followers.value = mockFollowers.value
+  } catch (err: any) {
+    error.value = err.message || 'Ошибка при загрузке подписчиков'
   } finally {
     loading.value = false
+  }
+}
+
+// Метод для отписки от пользователя
+const unfollowUser = async (userId: string) => {
+  try {
+    // Имитация запроса к API
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Обновляем статус подписки в моковых данных
+    const follower = mockFollowers.value.find(f => f.id === userId)
+    if (follower) {
+      follower.isFollowing = false
+    }
+    
+    // Обновляем отображаемый список
+    followers.value = [...mockFollowers.value]
+  } catch (err: any) {
+    console.error('Ошибка при отписке:', err)
+  }
+}
+
+// Метод для подписки на пользователя
+const followUser = async (userId: string) => {
+  try {
+    // Имитация запроса к API
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Обновляем статус подписки в моковых данных
+    const follower = mockFollowers.value.find(f => f.id === userId)
+    if (follower) {
+      follower.isFollowing = true
+    }
+    
+    // Обновляем отображаемый список
+    followers.value = [...mockFollowers.value]
+  } catch (err: any) {
+    console.error('Ошибка при подписке:', err)
   }
 }
 
@@ -58,7 +108,7 @@ const isFollowing = (userId: string): boolean => {
 }
 
 onMounted(() => {
-  fetchFollowers()
+  getFollowers()
 })
 </script>
 
@@ -89,14 +139,14 @@ onMounted(() => {
         <button 
           v-if="isFollowing(user.id)"
           class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark"
-          @click="profileStore.unfollowUser(user.id)"
+          @click="unfollowUser(user.id)"
         >
           Отписаться
         </button>
         <button 
           v-else
           class="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary hover:text-white"
-          @click="profileStore.followUser(user.id)"
+          @click="followUser(user.id)"
         >
           Подписаться
         </button>

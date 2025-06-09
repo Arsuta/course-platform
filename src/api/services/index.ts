@@ -4,6 +4,7 @@ import { CoursesService } from './courses';
 import { CategoriesService } from './categories';
 import { ProgressService } from './progress';
 import { LessonsService } from './lessons';
+import { GameService } from './game';
 
 // Создаем экземпляры сервисов
 export const authService = new AuthService();
@@ -12,6 +13,7 @@ export const coursesService = new CoursesService();
 export const categoriesService = new CategoriesService();
 export const progressService = new ProgressService();
 export const lessonsService = new LessonsService();
+export const gameService = new GameService();
 
 // Экспортируем классы сервисов для возможности создания новых экземпляров
 export { 
@@ -20,5 +22,6 @@ export {
   CoursesService, 
   CategoriesService, 
   ProgressService,
-  LessonsService
+  LessonsService,
+  GameService
 }; 

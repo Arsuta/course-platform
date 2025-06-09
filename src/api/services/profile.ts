@@ -60,4 +60,31 @@ export class ProfileService extends BaseApiService {
   async getXp(): Promise<ApiResponse<{ total_xp: number }>> {
     return this.get<{ total_xp: number }>(API_PROFILE.XP);
   }
+  
+  /**
+   * Обновить количество XP
+   * @param xpToAdd - количество XP для добавления к текущему значению
+   */
+  async updateXp(xpToAdd: number): Promise<ApiResponse<{ total_xp: number }>> {
+    // Сначала получаем текущий XP
+    const currentXp = await this.getXp();
+    
+    // Приводим ответ к нужному типу
+    const currentXpData = currentXp as any;
+    const totalXp = currentXpData.total_xp || 0;
+    
+    // Создаем объект с обновленным значением XP
+    const updateData = {
+      total_xp: totalXp + xpToAdd
+    };
+    
+    console.log(`Обновляем XP: текущий ${totalXp} + новый ${xpToAdd} = ${updateData.total_xp}`);
+    
+    // Используем профиль для обновления XP, так как для /profile/xp нет PUT эндпоинта
+    const response = await this.put<UserProfile>(API_PROFILE.UPDATE, updateData);
+    
+    // Преобразуем ответ в ожидаемый формат
+    const updatedXp = (response as any)?.total_xp || totalXp + xpToAdd;
+    return { total_xp: updatedXp } as ApiResponse<{ total_xp: number }>;
+  }
 } 

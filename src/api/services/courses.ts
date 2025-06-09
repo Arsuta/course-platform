@@ -14,6 +14,13 @@ export class CoursesService extends BaseApiService {
   }
 
   /**
+   * Получить список популярных курсов
+   */
+  async getPopularCourses(params?: { limit?: number }): Promise<ApiResponse<Course[]>> {
+    return this.get<Course[]>('/courses/popular', { params });
+  }
+
+  /**
    * Получить список курсов по категории
    */
   async getCoursesByCategory(categoryId: string, params?: { page?: number; limit?: number }): Promise<ApiResponse<Course[]>> {

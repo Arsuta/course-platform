@@ -9,7 +9,8 @@ import {
   Bars3Icon,
   UserIcon,
   ArrowRightOnRectangleIcon,
-  CogIcon
+  CogIcon,
+  PuzzlePieceIcon
 } from '@heroicons/vue/24/outline'
 import { RouterLink } from 'vue-router'
 
@@ -37,6 +38,7 @@ const navItems = computed(() => {
     return [
       ...baseItems,
       { title: 'Курсы', path: '/courses', icon: AcademicCapIcon },
+      { title: 'Мини-игры', path: '/games', icon: PuzzlePieceIcon },
       { 
         title: 'Профиль', 
         path: `/profile/${authStore.user?.id}`, 

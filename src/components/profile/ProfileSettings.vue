@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useProfileStore } from '@/stores/profile'
+import type { UserProfile } from '@/api/types'
 
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
+const profileStore = useProfileStore()
+
+const userProfile = ref<UserProfile | null>(null)
 
 const form = ref({
-  name: authStore.currentUser?.name || '',
-  email: authStore.currentUser?.email || '',
+  first_name: '',
+  last_name: '',
+  email: '',
+  avatar: '',
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
@@ -21,18 +28,64 @@ const error = ref('')
 const success = ref('')
 const isLoading = ref(false)
 
+// Загрузка профиля пользователя при монтировании компонента
+onMounted(async () => {
+  try {
+    isLoading.value = true
+    // Пробуем получить профиль из authStore, если он уже там есть
+    if (authStore.currentUser) {
+      userProfile.value = authStore.currentUser
+    } else {
+      // Если нет, загружаем с сервера
+      userProfile.value = await profileStore.getProfile()
+    }
+    
+    // Заполняем форму данными профиля
+    if (userProfile.value) {
+      form.value.first_name = userProfile.value.first_name || ''
+      form.value.last_name = userProfile.value.last_name || ''
+      form.value.email = userProfile.value.email || ''
+      form.value.avatar = userProfile.value.avatar || ''
+    }
+  } catch (e) {
+    error.value = 'Не удалось загрузить данные профиля'
+    console.error('Ошибка загрузки профиля:', e)
+  } finally {
+    isLoading.value = false
+  }
+})
+
 const updateProfile = async () => {
   try {
     isLoading.value = true
     error.value = ''
+    success.value = ''
     
-    // Имитация задержки запроса
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Формируем объект для обновления профиля
+    const profileData: Partial<UserProfile> = {
+      first_name: form.value.first_name,
+      last_name: form.value.last_name
+    }
     
-    // Здесь будет логика обновления профиля
-    success.value = 'Профиль успешно обновлен'
+    // Если URL аватара изменился, тоже отправляем его
+    if (form.value.avatar !== userProfile.value?.avatar) {
+      profileData.avatar = form.value.avatar
+    }
+    
+    // Обновляем профиль через API
+    const updatedProfile = await profileStore.updateProfile(profileData)
+    
+    if (updatedProfile) {
+      userProfile.value = updatedProfile
+      // Обновляем профиль и в authStore, чтобы данные были синхронизированы
+      await authStore.loadUserProfile()
+      success.value = 'Профиль успешно обновлен'
+    } else {
+      error.value = profileStore.error || 'Ошибка при обновлении профиля'
+    }
   } catch (e) {
     error.value = 'Ошибка при обновлении профиля'
+    console.error('Ошибка обновления профиля:', e)
   } finally {
     isLoading.value = false
   }
@@ -47,17 +100,16 @@ const updatePassword = async () => {
 
     isLoading.value = true
     error.value = ''
+    success.value = ''
     
-    // Имитация задержки запроса
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Здесь должен быть запрос на обновление пароля,
+    // но в API EDU нет такого эндпоинта, этот функционал должен быть в AUTH API
     
-    // Здесь будет логика обновления пароля
-    success.value = 'Пароль успешно обновлен'
-    form.value.currentPassword = ''
-    form.value.newPassword = ''
-    form.value.confirmPassword = ''
+    // Показываем сообщение об ошибке
+    error.value = 'Функция смены пароля пока не реализована в API'
   } catch (e) {
     error.value = 'Ошибка при обновлении пароля'
+    console.error('Ошибка обновления пароля:', e)
   } finally {
     isLoading.value = false
   }
@@ -82,7 +134,16 @@ const updateTheme = () => {
         <div>
           <label class="block text-sm font-medium text-gray-700">Имя</label>
           <input
-            v-model="form.name"
+            v-model="form.first_name"
+            type="text"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Фамилия</label>
+          <input
+            v-model="form.last_name"
             type="text"
             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
           >
@@ -93,8 +154,21 @@ const updateTheme = () => {
           <input
             v-model="form.email"
             type="email"
+            disabled
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 cursor-not-allowed"
+          >
+          <p class="mt-1 text-xs text-gray-500">Email нельзя изменить</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">URL аватара</label>
+          <input
+            v-model="form.avatar"
+            type="text"
+            placeholder="https://example.com/avatar.jpg"
             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
           >
+          <p class="mt-1 text-xs text-gray-500">Введите URL изображения для вашего аватара</p>
         </div>
 
         <button

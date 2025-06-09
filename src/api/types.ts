@@ -8,6 +8,13 @@ export interface ApiResponse<T = any> {
   errors?: string[];
 }
 
+// Тип для ошибок API
+export interface ApiError {
+  status: number;
+  message: string;
+  details?: string;
+}
+
 // Пагинация
 export interface PaginationMeta {
   current_page: number;
@@ -203,4 +210,58 @@ export interface UserData {
   avatar?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+// Игровой API
+export interface ClickRequest {
+  click_count: number;
+  client_timestamp: number;
+  session_time: number;
+}
+
+export interface ClickResponse {
+  status: string;
+  total_clicks: number;
+}
+
+export interface ClickerStats {
+  id: string;
+  user_id: string;
+  total_clicks: number;
+  clicks_per_second: number;
+  last_click_time: string;
+  last_save_time: string;
+  last_save_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClickerSession {
+  id: string;
+  user_id: string;
+  click_count: number;
+  start_time: string;
+  end_time: string;
+  average_cps: number;
+  max_cps: number;
+  created_at: string;
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  user_id: string;
+  username: string;
+  score: number;
+  rank: number;
+  updated_at: string;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  user_rank: LeaderboardEntry | null;
+}
+
+export interface StatsResponse {
+  stats: ClickerStats;
+  recent_sessions: ClickerSession[];
 } 

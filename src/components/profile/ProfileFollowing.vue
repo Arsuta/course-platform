@@ -15,33 +15,58 @@ const totalFollowing = ref(0)
 const currentPage = ref(1)
 const perPage = ref(10)
 
-const fetchFollowing = async () => {
+// Добавить моковые данные для подписок
+const mockFollowing = ref([
+  {
+    id: '1',
+    first_name: 'Иван',
+    last_name: 'Петров',
+    email: 'ivan@example.com',
+    avatar: '/avatars/user1.jpg',
+    role: 'student'
+  },
+  {
+    id: '2',
+    first_name: 'Анна',
+    last_name: 'Сидорова',
+    email: 'anna@example.com',
+    avatar: '/avatars/user2.jpg',
+    role: 'teacher'
+  },
+  {
+    id: '3',
+    first_name: 'Алексей',
+    last_name: 'Иванов',
+    email: 'alex@example.com',
+    avatar: '/avatars/user3.jpg',
+    role: 'student'
+  }
+])
+
+// Заменить вызовы API на работу с моковыми данными
+const getFollowing = async () => {
+  loading.value = true
   try {
-    loading.value = true
-    error.value = null
-    
-    const userId = route.params.id as string
-    if (!userId) return
-    
-    const response = await profileStore.getUserById(userId)
-    const user = response.data
-    
-    if (user.following) {
-      following.value = []
-      totalFollowing.value = user.following.length
-      
-      // Получаем информацию о каждом подписчике
-      const followingPromises = user.following.map((id: string) => 
-        profileStore.getUserById(id)
-      )
-      
-      const followingResponses = await Promise.all(followingPromises)
-      following.value = followingResponses.map((response: ApiResponse<User>) => response.data)
-    }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Ошибка при загрузке подписок'
+    // Имитация загрузки данных
+    await new Promise(resolve => setTimeout(resolve, 500))
+    following.value = mockFollowing.value
+  } catch (err: any) {
+    error.value = err.message || 'Ошибка при загрузке подписок'
   } finally {
     loading.value = false
+  }
+}
+
+// Метод для отписки от пользователя
+const unfollowUser = async (userId: string) => {
+  try {
+    // Имитация запроса к API
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Удаляем пользователя из списка подписок
+    following.value = following.value.filter(user => user.id !== userId)
+  } catch (err: any) {
+    console.error('Ошибка при отписке:', err)
   }
 }
 
@@ -53,7 +78,7 @@ const handlePageChange = (page: number) => {
 }
 
 onMounted(() => {
-  fetchFollowing()
+  getFollowing()
 })
 </script>
 
@@ -83,7 +108,7 @@ onMounted(() => {
         
         <button 
           class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark"
-          @click="profileStore.unfollowUser(user.id)"
+          @click="unfollowUser(user.id)"
         >
           Отписаться
         </button>

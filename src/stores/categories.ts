@@ -1,46 +1,50 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { categoriesService } from '@/api/services'
+import { ref, computed } from 'vue'
 import type { Category } from '@/api/types'
+import { api } from '@/api'
 
 export const useCategoriesStore = defineStore('categories', () => {
   const categories = ref<Category[]>([])
-  const isLoading = ref(false)
+  const loading = ref(false)
   const error = ref<string | null>(null)
   
   // Загрузить все категории
-  async function fetchCategories() {
+  const fetchCategories = async () => {
     if (categories.value.length > 0) {
       return categories.value
     }
     
     try {
-      isLoading.value = true
+      loading.value = true
       error.value = null
       
-      const categoriesData = await categoriesService.getCategories()
-      
-      // Теперь getCategories() возвращает массив категорий напрямую
-      categories.value = categoriesData
-      return categoriesData
+      const response = await api.categories.getCategories()
+      if (response && response.data) {
+        categories.value = response.data
+      }
+      return categories.value
     } catch (err: any) {
       error.value = err.message || 'Ошибка при загрузке категорий'
       return []
     } finally {
-      isLoading.value = false
+      loading.value = false
     }
   }
   
   // Получить категорию по ID
-  function getCategoryById(id: string) {
-    return categories.value.find(cat => cat.id === id) || null
+  const getCategoryById = (id: string) => {
+    return categories.value.find(category => category.id === id)
   }
+  
+  // Получить все категории
+  const getAllCategories = computed(() => categories.value)
   
   return {
     categories,
-    isLoading,
+    loading,
     error,
     fetchCategories,
-    getCategoryById
+    getCategoryById,
+    getAllCategories
   }
 }) 

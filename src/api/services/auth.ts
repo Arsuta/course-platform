@@ -201,4 +201,12 @@ export class AuthService extends BaseApiService {
     console.log(`Отправка запроса на OAuth авторизацию по адресу: ${API_AUTH.OAUTH_GOOGLE}`);
     return this.get<TokenPair>(API_AUTH.OAUTH_GOOGLE);
   }
+
+  /**
+   * Изменение пароля пользователя
+   */
+  async changePassword(data: { old_password: string; new_password: string }): Promise<ApiResponse<any>> {
+    console.log(`Отправка запроса на изменение пароля по адресу: ${API_AUTH.CHANGE_PASSWORD}`);
+    return this.post<any>(API_AUTH.CHANGE_PASSWORD, data);
+  }
 } 

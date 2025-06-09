@@ -3,20 +3,20 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useAuthStore } from '@/stores/auth'
-import { useCourseStore } from '@/stores/courses'
-import type { Course } from '@/api/types'
-import type { Lesson, Module } from '@/types/course'
+import { useCoursesStore } from '@/stores/courses'
+import type { Course, CourseStatus, CourseLevel } from '@/api/types'
+import { api } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const courseStore = useCourseStore()
+const courseStore = useCoursesStore()
 
 const course = ref<Course | null>(null)
-const lessons = ref<Lesson[]>([])
-const selectedModule = ref<Module | null>(null)
+const lessons = ref<any[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const selectedModule = ref<string | null>(null)
 
 const courseGradients = {
   programming: 'bg-gradient-to-r from-blue-500 to-purple-500',
@@ -28,7 +28,7 @@ const courseGradients = {
 type CourseCategory = keyof typeof courseGradients
 
 const formattedDescription = computed(() => {
-  if (!course.value) return ''
+  if (!course.value || !course.value.description) return ''
   return marked(course.value.description)
 })
 
@@ -45,15 +45,31 @@ const levelLabels = {
   advanced: 'Продвинутый'
 } as const
 
-const getCategoryLabel = (categoryId: string) => {
+const statusLabels = {
+  draft: 'Черновик',
+  pending: 'На модерации',
+  published: 'Опубликован',
+  rejected: 'Отклонен'
+} as const
+
+const getCategoryLabel = (categoryId: string | undefined) => {
+  if (!categoryId) return 'Без категории'
   return categoryLabels[categoryId as keyof typeof categoryLabels] || categoryId
 }
 
-const getLevelLabel = (level: string) => {
-  return levelLabels[level as keyof typeof levelLabels] || level
+const getLevelLabel = (level: CourseLevel | undefined) => {
+  if (!level) return 'Не указан'
+  return levelLabels[level] || level
 }
 
-const formatDuration = (minutes: number): string => {
+const getStatusLabel = (status: CourseStatus | undefined) => {
+  if (!status) return 'Не указан'
+  return statusLabels[status] || status
+}
+
+const formatDuration = (minutes: number | undefined): string => {
+  if (!minutes) return 'Не указана'
+  
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   
@@ -64,25 +80,19 @@ const formatDuration = (minutes: number): string => {
   return `${hours} ч ${remainingMinutes > 0 ? `${remainingMinutes} мин` : ''}`
 }
 
-const formatPrice = (price: number): string => {
+const formatPrice = (price: number | undefined): string => {
+  if (price === undefined) return 'Не указана'
   return price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽`
 }
 
-const categoryToType: Record<string, CourseCategory> = {
-  '1': 'programming',
-  '2': 'design',
-  '3': 'marketing',
-  '4': 'business'
-}
-
-const getCategoryGradient = (categoryId: string): string => {
-  const defaultGradient = 'bg-gradient-to-r from-gray-500 to-gray-700'
-  const categoryType = categoryToType[categoryId]
-  return categoryType ? courseGradients[categoryType] : defaultGradient
+const getCategoryGradient = (categoryId: string | undefined): string => {
+  if (!categoryId) return 'bg-gradient-to-r from-gray-500 to-gray-700'
+  const categoryType = categoryId as CourseCategory
+  return courseGradients[categoryType] || 'bg-gradient-to-r from-gray-500 to-gray-700'
 }
 
 // Получение уроков курса
-const getCourseLessons = async (courseId: string): Promise<Lesson[]> => {
+const getCourseLessons = async (courseId: string): Promise<any[]> => {
   try {
     // Здесь должен быть запрос к API за уроками курса
     // Пока возвращаем пустой массив
@@ -97,8 +107,20 @@ onMounted(async () => {
   try {
     loading.value = true
     const courseId = route.params.id as string
-    const response = await courseStore.fetchCourseById(courseId)
-    course.value = response
+    if (!courseId) {
+      throw new Error('Не указан ID курса')
+    }
+    
+    // Используем правильный метод из хранилища
+    const existingCourse = courseStore.getCourseById(courseId)
+    if (existingCourse) {
+      course.value = existingCourse
+    } else {
+      const response = await api.courses.getCourse(courseId)
+      if (response && response.data) {
+        course.value = response.data
+      }
+    }
     
     lessons.value = await getCourseLessons(courseId)
   } catch (e) {
@@ -120,10 +142,13 @@ const handleEnroll = async () => {
 
   if (!course.value) return
   
-  const success = await courseStore.enrollCourse(course.value.id)
-  if (success) {
+  try {
+    // Используем API напрямую вместо метода хранилища
+    await api.courses.purchaseCourse(course.value.id)
     // TODO: Показать уведомление об успешной записи
     router.push(`/courses/${course.value.id}/learn`)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Ошибка при записи на курс'
   }
 }
 </script>
@@ -145,9 +170,9 @@ const handleEnroll = async () => {
         <div class="flex items-center space-x-4 text-gray-600">
           <span>{{ formatDuration(course.duration) }}</span>
           <span>•</span>
-          <span>{{ getLevelLabel(course.status) }}</span>
+          <span>{{ getStatusLabel(course.status) }}</span>
           <span>•</span>
-          <span>{{ course.lessons_count }} уроков</span>
+          <span>{{ course.students_count || 0 }} студентов</span>
         </div>
       </div>
       
@@ -182,7 +207,7 @@ const handleEnroll = async () => {
             </div>
             <div class="flex items-center space-x-1">
               <span class="text-yellow-400">★</span>
-                <span>{{ course.rating.toFixed(1) }}</span>
+                <span>{{ course.rating ? course.rating.toFixed(1) : '0.0' }}</span>
             </div>
           </div>
 
@@ -198,30 +223,24 @@ const handleEnroll = async () => {
             <div class="mt-6 space-y-4 text-gray-600">
               <div class="flex items-center space-x-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <span>{{ formatDuration(course.duration) }}</span>
+                <span>Длительность: {{ formatDuration(course.duration) }}</span>
               </div>
+              
               <div class="flex items-center space-x-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                 </svg>
-                <span>{{ getLevelLabel(course.status) }}</span>
-            </div>
+                <span>Уровень: {{ getLevelLabel(course.level) }}</span>
+              </div>
+              
               <div class="flex items-center space-x-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                 </svg>
-                <span>{{ course.lessons_count }} уроков</span>
-            </div>
-            </div>
-          </div>
-
-          <!-- Категория курса -->
-          <div class="bg-white rounded-xl shadow-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Категория</h3>
-            <div :class="getCategoryGradient(course.category_id)" class="text-white rounded-lg p-4">
-              {{ getCategoryLabel(course.category_id) }}
+                <span>Категория: {{ getCategoryLabel(course.category_id) }}</span>
+              </div>
             </div>
           </div>
         </div>

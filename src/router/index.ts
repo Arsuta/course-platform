@@ -44,6 +44,15 @@ const router = createRouter({
         // Добавляем вложенные маршруты для курсов
         courseRoutes,
         {
+          path: 'games',
+          name: 'games',
+          component: () => import('@/views/GamePage.vue'),
+          meta: { 
+            title: 'Мини-игры',
+            requiresAuth: true 
+          }
+        },
+        {
           path: 'about',
           name: 'about',
           component: () => import('@/views/About.vue'),
@@ -69,6 +78,59 @@ const router = createRouter({
             title: 'Профиль',
             requiresAuth: true 
           }
+        },
+        // Добавляем маршруты для административной панели
+        {
+          path: 'admin',
+          name: 'admin',
+          component: () => import('@/views/admin/AdminDashboard.vue'),
+          meta: {
+            title: 'Панель администратора',
+            requiresAuth: true,
+            requiresAdmin: true
+          },
+          children: [
+            {
+              path: '',
+              name: 'admin-dashboard',
+              component: () => import('@/views/admin/Dashboard.vue'),
+              meta: {
+                title: 'Обзор',
+                requiresAuth: true,
+                requiresAdmin: true
+              }
+            },
+            {
+              path: 'courses',
+              name: 'admin-courses',
+              component: () => import('@/views/admin/Courses.vue'),
+              meta: {
+                title: 'Управление курсами',
+                requiresAuth: true,
+                requiresAdmin: true
+              }
+            },
+            {
+              path: 'courses/pending',
+              name: 'admin-courses-pending',
+              component: () => import('@/views/admin/PendingCourses.vue'),
+              meta: {
+                title: 'Курсы на модерации',
+                requiresAuth: true,
+                requiresAdmin: true
+              }
+            },
+            {
+              path: 'users',
+              name: 'admin-users',
+              component: () => import('@/views/admin/Users.vue'),
+              meta: {
+                title: 'Управление пользователями',
+                requiresAuth: true,
+                requiresAdmin: true
+              }
+            }
+          ]
         }
       ]
     },
@@ -147,13 +209,22 @@ router.beforeEach((to, from, next) => {
   
   const authStore = useAuthStore()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
   const isPublic = to.matched.some(record => record.meta.public)
 
   // Установка заголовка страницы
   document.title = to.meta.title ? `${to.meta.title} | Course Platform` : 'Course Platform'
 
+  // Если страница требует прав администратора
+  if (requiresAdmin && (!authStore.isAuthenticated || authStore.user?.role !== 'admin')) {
+    console.log('Требуются права администратора, доступ запрещен')
+    next({ 
+      name: 'home', 
+      params: { message: 'У вас нет доступа к этой странице' }
+    })
+  }
   // Если страница требует авторизации и пользователь не авторизован
-  if (requiresAuth && !authStore.isAuthenticated) {
+  else if (requiresAuth && !authStore.isAuthenticated) {
     console.log('Требуется авторизация, перенаправление на логин')
     next({ 
       name: 'login', 

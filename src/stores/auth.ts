@@ -651,6 +651,34 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Изменение пароля пользователя
+  async function changePassword(oldPassword: string, newPassword: string): Promise<boolean> {
+    try {
+      isLoading.value = true
+      error.value = null
+      
+      const response = await authService.changePassword({
+        old_password: oldPassword,
+        new_password: newPassword
+      })
+      
+      // Проверяем успешность запроса
+      if (response && (response.success || (response.data && response.data.success))) {
+        console.log('Пароль успешно изменен')
+        return true
+      }
+      
+      return false
+    } catch (err: any) {
+      console.error('Ошибка при изменении пароля:', err)
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Ошибка при изменении пароля'
+      error.value = errorMsg
+      throw new Error(errorMsg)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Экспортируем все функции и состояния
   return {
     user,
@@ -674,6 +702,7 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuth,
     initAuth,
     getUserById,
-    checkCorsEnabled
+    checkCorsEnabled,
+    changePassword
   }
 })

@@ -1,18 +1,28 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useCourseStore } from '@/stores/courses'
+import { useCoursesStore } from '@/stores/courses'
 import type { Course } from '@/api/types'
 import type { CategoryId } from '@/types/course'
 import { COURSE_CONSTANTS } from '@/constants/course'
 
+// Расширенный тип для моковых курсов
+interface ExtendedCourse extends Course {
+  cover_image?: string;
+  author?: {
+    first_name: string;
+    last_name: string;
+    avatar: string;
+  };
+}
+
 const router = useRouter()
-const courseStore = useCourseStore()
-const courses = ref<Course[]>([])
+const courseStore = useCoursesStore()
+const courses = ref<ExtendedCourse[]>([])
 
 onMounted(async () => {
-  await courseStore.fetchPopularCourses()
-  courses.value = courseStore.popularCourses
+  await courseStore.fetchCourses()
+  courses.value = courseStore.courses as ExtendedCourse[]
 })
 
 const handleEnrollClick = () => {
@@ -23,12 +33,12 @@ const handleEnrollClick = () => {
   })
 }
 
-const getCategoryLabel = (categoryId: string) => {
-  return COURSE_CONSTANTS?.CATEGORY_LABELS?.[categoryId as CategoryId] || categoryId
+const getCategoryLabel = (categoryId?: string) => {
+  return categoryId ? (COURSE_CONSTANTS?.CATEGORY_LABELS?.[categoryId as CategoryId] || categoryId) : 'Без категории'
 }
 
-const getLevelLabel = (level: string) => {
-  return COURSE_CONSTANTS?.LEVEL_LABELS?.[level as keyof typeof COURSE_CONSTANTS.LEVEL_LABELS] || level
+const getLevelLabel = (level?: string) => {
+  return level ? (COURSE_CONSTANTS?.LEVEL_LABELS?.[level as keyof typeof COURSE_CONSTANTS.LEVEL_LABELS] || level) : 'Не указан'
 }
 
 const formatPrice = (price: number): string => {
@@ -57,7 +67,7 @@ const formatPrice = (price: number): string => {
         <!-- Превью изображение -->
         <div class="relative aspect-video overflow-hidden">
           <img 
-            :src="course.cover_image || '/images/default-course.jpg'" 
+            :src="course.cover_image || course.thumbnail || '/images/default-course.jpg'" 
             :alt="course.title"
             class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
@@ -73,7 +83,7 @@ const formatPrice = (price: number): string => {
               {{ getCategoryLabel(course.category_id) }}
             </span>
             <span class="text-sm text-gray-500">
-              {{ getLevelLabel(course.status) }}
+              {{ course.level || 'Не указан' }}
             </span>
           </div>
 
@@ -89,9 +99,12 @@ const formatPrice = (price: number): string => {
               />
               <span class="text-sm text-gray-600">{{ course.author.first_name }} {{ course.author.last_name }}</span>
             </div>
+            <div v-else class="text-sm text-gray-600">
+              Автор не указан
+            </div>
             <div class="flex items-center space-x-1 text-yellow-400">
               <span>★</span>
-              <span class="text-gray-700">{{ course.rating }}</span>
+              <span class="text-gray-700">{{ course.rating || 'N/A' }}</span>
             </div>
           </div>
 

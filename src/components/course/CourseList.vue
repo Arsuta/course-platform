@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { Course, CategoryId } from '@/types/course'
+import type { Course } from '@/api/types'
 import { COURSE_CONSTANTS } from '@/constants/course'
 import CourseCard from './CourseCard.vue'
-import { useCourseStore } from '@/stores/courses'
+import { useCoursesStore } from '@/stores/courses'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
+import { api } from '@/api'
+
+// Определяем тип для CategoryId
+type CategoryId = string;
 
 const props = defineProps<{
   courses?: Course[]
@@ -15,13 +19,15 @@ const searchQuery = ref('')
 const selectedCategory = ref<CategoryId | 'all'>('all')
 const selectedLevel = ref<string>(COURSE_CONSTANTS.LEVELS.ALL)
 
-const courseStore = useCourseStore()
+const courseStore = useCoursesStore()
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
 onMounted(async () => {
-  await courseStore.fetchCourses()
+  if (!props.courses || props.courses.length === 0) {
+    await courseStore.fetchCourses()
+  }
 })
 
 const formatPrice = (price: number): string => {
@@ -40,13 +46,19 @@ const formatDuration = (minutes: number): string => {
 }
 
 const filteredCourses = computed(() => {
-  return (props.courses || []).filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         course.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+  const coursesToFilter = props.courses?.length ? props.courses : courseStore.courses
+  
+  return coursesToFilter.filter(course => {
+    const matchesSearch = !searchQuery.value || 
+                        (course.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                         (course.description && course.description.toLowerCase().includes(searchQuery.value.toLowerCase())))
+    
     const matchesCategory = selectedCategory.value === 'all' || 
-                          course.category?.id === selectedCategory.value
+                          course.category_id === selectedCategory.value
+    
     const matchesLevel = selectedLevel.value === COURSE_CONSTANTS.LEVELS.ALL || 
                         course.level === selectedLevel.value
+    
     return matchesSearch && matchesCategory && matchesLevel
   })
 })
@@ -55,16 +67,24 @@ const handleEnroll = async (courseId: string) => {
   if (!authStore.isAuthenticated) {
     router.push({ 
       name: 'login',
-      query: { redirect: route.fullPath }
+      query: { redirect: route.fullPath },
+      params: { message: 'Для записи на курс необходима авторизация' }
     })
     return
   }
 
-  const success = await courseStore.enrollCourse(courseId)
-  if (success) {
+  try {
+    // Используем API напрямую вместо метода хранилища
+    await api.courses.purchaseCourse(courseId)
     router.push(`/courses/${courseId}/learn`)
+  } catch (e) {
+    console.error('Ошибка при записи на курс:', e)
   }
 }
+
+const handleCourseClick = (course: Course) => {
+  router.push(`/courses/${course.id}`);
+};
 </script>
 
 <template>
@@ -106,6 +126,8 @@ const handleEnroll = async (courseId: string) => {
         v-for="course in filteredCourses"
         :key="course.id"
         :course="course"
+        :onEnroll="handleEnroll"
+        @click="handleCourseClick(course)"
       />
     </div>
 

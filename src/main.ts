@@ -7,6 +7,20 @@ import router from './router'
 
 console.log('main.ts - Приложение запускается')
 
+// Устанавливаем API URL, если не заданы через .env
+if (!import.meta.env.VITE_API_BASE_URL) {
+  // @ts-ignore
+  import.meta.env.VITE_API_BASE_URL = 'http://localhost:3000/api/v1';
+  // @ts-ignore
+  import.meta.env.VITE_AUTH_API_BASE_URL = 'http://localhost:3000/api/v1/auth';
+  // @ts-ignore
+  import.meta.env.VITE_EDU_API_BASE_URL = 'http://localhost:3000/api/v1/edu';
+  // @ts-ignore
+  import.meta.env.VITE_GAME_API_BASE_URL = 'http://localhost:3000/api/v1/game';
+  
+  console.log('API URLs установлены программно:', import.meta.env.VITE_API_BASE_URL);
+}
+
 // Обработчик ошибок
 window.addEventListener('error', (event) => {
   console.error('Глобальная ошибка:', event.error)

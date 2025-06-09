@@ -53,7 +53,8 @@ export const API_AUTH = {
   RESET_PASSWORD_REQUEST: '/reset-password/request',
   RESET_PASSWORD_CONFIRM: '/reset-password/confirm',
   REFRESH: '/refresh',
-  OAUTH_GOOGLE: '/oauth/google'
+  OAUTH_GOOGLE: '/oauth/google',
+  CHANGE_PASSWORD: '/change-password'
 };
 
 // Образовательная платформа (/api/v1/edu)

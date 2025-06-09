@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useCourseStore } from '@/stores/courses'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useCoursesStore } from '@/stores/courses'
 import { useAuthStore } from '@/stores/auth'
 import type { Course, CourseProgress, Module, CourseCategory } from '@/types/course'
 import { formatPrice, formatDuration } from '@/utils/formatters'
 
 const route = useRoute()
-const courseStore = useCourseStore()
+const router = useRouter()
+const courseStore = useCoursesStore()
 const authStore = useAuthStore()
 
 const courseProgress: Record<string, CourseProgress> = {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Course } from '@/types/course'
-import { useCourseStore } from '@/stores/courses'
+import { useCoursesStore } from '@/stores/courses'
 import { formatPrice, formatDuration } from '@/utils/formatters'
 
 const props = defineProps<{
@@ -12,7 +12,7 @@ const searchQuery = ref('')
 const selectedCategory = ref<string>('all')
 const selectedLevel = ref<string>('all')
 
-const courseStore = useCourseStore()
+const courseStore = useCoursesStore()
 
 const filteredCourses = computed(() => {
   return (props.courses || []).filter(course => {

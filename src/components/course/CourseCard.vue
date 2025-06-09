@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Course, CategoryId } from '@/types/course'
+import type { CategoryId } from '@/types/course'
+import type { Course } from '@/api/types'
 import type { CourseGradient } from '@/constants/gradients'
 import { COURSE_GRADIENTS } from '@/constants/gradients'
-import { defineProps, defineEmits } from 'vue'
 
 const categoryLabels: Record<CategoryId, string> = {
   programming: 'Программирование',
@@ -31,14 +31,14 @@ const emit = defineEmits<{
 const router = useRouter()
 
 const categoryLabel = computed(() => {
-  return props.course.category?.name || categoryLabels[props.course.category_id] || 'Без категории'
+  return categoryLabels[props.course.category_id as CategoryId] || 'Без категории'
 })
 
 const levelLabel = computed(() => {
-  return getLevelLabel(props.course.level)
+  return getLevelLabel(props.course.level || '')
 })
 
-const formatDuration = (minutes: number): string => {
+const formatDuration = (minutes: number = 0): string => {
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   
@@ -49,7 +49,7 @@ const formatDuration = (minutes: number): string => {
   return `${hours} ч ${remainingMinutes > 0 ? `${remainingMinutes} мин` : ''}`
 }
 
-const formatPrice = (price: number): string => {
+const formatPrice = (price: number = 0): string => {
   return price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru-RU')} ₽`
 }
 
@@ -65,7 +65,8 @@ const getDefaultGradient = (id: string): CourseGradient => {
   return COURSE_GRADIENTS[index]
 }
 
-const handleEnroll = () => {
+const handleEnroll = (event: Event) => {
+  event.stopPropagation()
   if (props.onEnroll) {
     props.onEnroll(props.course.id)
   } else {
@@ -80,20 +81,20 @@ const getLevelLabel = (level: string) => {
 
 <template>
   <div 
-    class="group relative bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl h-full flex"
+    class="group relative bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl h-full flex flex-col"
     @click="handleClick"
   >
     <!-- Превью с градиентом -->
-    <div class="relative w-1/3 overflow-hidden">
+    <div class="relative w-full aspect-video overflow-hidden">
       <img 
-        :src="course.image" 
+        :src="course.thumbnail || '/images/default-course.jpg'" 
         :alt="course.title"
-        class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
       />
       <div 
         class="absolute inset-0 bg-gradient-to-br opacity-60"
-        :class="course.gradient || getDefaultGradient(course.id)"
-      />
+        :class="getDefaultGradient(course.id)"
+      ></div>
     </div>
 
     <!-- Контент -->
@@ -114,7 +115,7 @@ const getLevelLabel = (level: string) => {
       </h3>
 
       <!-- Описание -->
-      <p class="text-sm text-gray-600 line-clamp-2 mb-4">
+      <p v-if="course.description" class="text-sm text-gray-600 line-clamp-2 mb-4">
         {{ course.description }}
       </p>
 
@@ -122,7 +123,7 @@ const getLevelLabel = (level: string) => {
       <div class="mt-auto">
         <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
           <span>{{ formatDuration(course.duration) }}</span>
-          <span v-if="course.modules">{{ course.modules.length }} модулей</span>
+          <span>{{ course.students_count || 0 }} студентов</span>
         </div>
 
         <!-- Разделитель -->
@@ -136,14 +137,14 @@ const getLevelLabel = (level: string) => {
             </span>
             <div class="flex items-center space-x-1">
               <span class="text-yellow-400">★</span>
-              <span class="text-sm text-gray-600">{{ course.rating }}</span>
+              <span class="text-sm text-gray-600">{{ course.rating?.toFixed(1) || 'N/A' }}</span>
             </div>
           </div>
           <button 
             class="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors"
-            @click.stop="handleEnroll"
+            @click="handleEnroll"
           >
-            {{ course.isEnrolled ? 'Продолжить' : 'Записаться' }}
+            Записаться
           </button>
         </div>
       </div>
